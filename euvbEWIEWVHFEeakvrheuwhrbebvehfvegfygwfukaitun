@@ -1,0 +1,2986 @@
+
+
+
+local a=game:GetService"HttpService"
+
+if not isfolder"Noctis"then
+makefolder"Noctis"
+end
+
+local b=tostring(game:GetService"MarketplaceService":GetProductInfo(game.PlaceId).Name)
+b=b:gsub("[^%w_ ]","")
+b=b:gsub("%s+","_")
+
+local c="Noctis/Kaitun"..b
+if not isfolder(c)then
+makefolder(c)
+end
+
+local d
+local e=c.."/autoload.txt"
+
+ConfigData={}
+Elements={}
+CURRENT_VERSION=nil
+
+
+function GetConfigList()
+local f={}
+if isfolder and listfiles then
+local g=listfiles(c)
+for h,i in pairs(g)do
+local j=i:match"([^/\\]+)%.json$"
+if j then
+table.insert(f,j)
+end
+end
+end
+return f
+end
+
+
+function GetAutoload()
+if isfile and isfile(e)then
+local f,g=pcall(function()
+return readfile(e)
+end)
+if f and g and g~=""then
+return g:match"^%s*(.-)%s*$"
+end
+end
+return nil
+end
+
+
+function SetAutoload(f)
+if writefile then
+writefile(e,f)
+print("Autoload config set to: "..f)
+end
+end
+
+
+function ClearAutoload()
+if delfile and isfile(e)then
+delfile(e)
+print"Autoload config cleared"
+end
+end
+
+
+function SaveConfigAs(f)
+if not f or f==""then
+warn"Config name cannot be empty"
+return false
+end
+
+if writefile then
+local g=c.."/"..f..".json"
+ConfigData._version=CURRENT_VERSION
+writefile(g,a:JSONEncode(ConfigData))
+d=f
+print("Config saved as: "..f)
+return true
+end
+return false
+end
+
+
+function LoadConfig(f)
+if not f or f==""then
+warn"Config name cannot be empty"
+return false
+end
+
+local g=c.."/"..f..".json"
+
+if not CURRENT_VERSION then return false end
+if isfile and isfile(g)then
+local h,i=pcall(function()
+return a:JSONDecode(readfile(g))
+end)
+if h and type(i)=="table"then
+if i._version==CURRENT_VERSION then
+ConfigData=i
+d=f
+LoadConfigElements()
+print("Config loaded: "..f)
+return true
+else
+warn"Config version mismatch"
+return false
+end
+else
+warn"Failed to decode config"
+return false
+end
+else
+warn("Config file not found: "..f)
+return false
+end
+end
+
+
+function DeleteConfig(f)
+if not f or f==""then
+warn"Config name cannot be empty"
+return false
+end
+
+local g=c.."/"..f..".json"
+if delfile and isfile(g)then
+delfile(g)
+print("Config deleted: "..f)
+
+
+if GetAutoload()==f then
+ClearAutoload()
+end
+
+return true
+else
+warn("Config file not found: "..f)
+return false
+end
+end
+
+
+function LoadConfigElements()
+for f,g in pairs(Elements)do
+if ConfigData[f]~=nil and g.Set then
+g:Set(ConfigData[f],true)
+end
+end
+end
+
+
+function ResetElements()
+
+ConfigData={_version=CURRENT_VERSION}
+
+
+for f,g in pairs(Elements)do
+if g.Set then
+pcall(function()
+
+if f:match"^Toggle_"then
+g:Set(false)
+elseif f:match"^Slider_"then
+g:Set(20)
+elseif f:match"^Input_"then
+g:Set""
+elseif f:match"^Dropdown_"then
+
+if type(g.Value)=="table"then
+g:Set{}
+else
+g:Set(nil)
+end
+end
+end)
+end
+end
+
+print"Elements reset to defaults"
+end
+
+local f={
+player="rbxassetid://12120698352",
+web="rbxassetid://137601480983962",
+bag="rbxassetid://8601111810",
+shop="rbxassetid://4985385964",
+cart="rbxassetid://128874923961846",
+plug="rbxassetid://137601480983962",
+settings="rbxassetid://70386228443175",
+loop="rbxassetid://122032243989747",
+gps="rbxassetid://17824309485",
+compas="rbxassetid://125300760963399",
+gamepad="rbxassetid://84173963561612",
+boss="rbxassetid://13132186360",
+scroll="rbxassetid://114127804740858",
+menu="rbxassetid://6340513838",
+crosshair="rbxassetid://12614416478",
+user="rbxassetid://108483430622128",
+stat="rbxassetid://12094445329",
+eyes="rbxassetid://14321059114",
+sword="rbxassetid://82472368671405",
+discord="rbxassetid://94434236999817",
+star="rbxassetid://107005941750079",
+skeleton="rbxassetid://17313330026",
+payment="rbxassetid://18747025078",
+scan="rbxassetid://109869955247116",
+alert="rbxassetid://73186275216515",
+question="rbxassetid://17510196486",
+idea="rbxassetid://16833255748",
+strom="rbxassetid://13321880293",
+water="rbxassetid://100076212630732",
+dcs="rbxassetid://15310731934",
+start="rbxassetid://108886429866687",
+next="rbxassetid://12662718374",
+rod="rbxassetid://103247953194129",
+fish="rbxassetid://97167558235554",
+}
+
+local g=game:GetService"UserInputService"
+local h=game:GetService"TweenService"
+local i=game:GetService"Players".LocalPlayer
+local j=i:GetMouse()
+local k=game:GetService"CoreGui"
+local l=workspace.CurrentCamera.ViewportSize
+
+local function isMobileDevice()
+return g.TouchEnabled
+and not g.KeyboardEnabled
+and not g.MouseEnabled
+end
+
+local m=isMobileDevice()
+
+local function safeSize(n,o)
+local p=n/l.X
+local q=o/l.Y
+
+if m then
+if p>0.5 then p=0.5 end
+if q>0.3 then q=0.3 end
+end
+
+return UDim2.new(p,0,q,0)
+end
+
+local function MakeDraggable(n,o)
+local function CustomPos(p,q)
+local r,s,t,u
+
+local function UpdatePos(v)
+local w=v.Position-t
+local x=UDim2.new(
+u.X.Scale,
+u.X.Offset+w.X,
+u.Y.Scale,
+u.Y.Offset+w.Y
+)
+local y=h:Create(q,TweenInfo.new(0.2),{Position=x})
+y:Play()
+end
+
+p.InputBegan:Connect(function(v)
+if v.UserInputType==Enum.UserInputType.MouseButton1 or v.UserInputType==Enum.UserInputType.Touch then
+r=true
+t=v.Position
+u=q.Position
+v.Changed:Connect(function()
+if v.UserInputState==Enum.UserInputState.End then
+r=false
+end
+end)
+end
+end)
+
+p.InputChanged:Connect(function(v)
+if v.UserInputType==Enum.UserInputType.MouseMovement or v.UserInputType==Enum.UserInputType.Touch then
+s=v
+end
+end)
+
+g.InputChanged:Connect(function(v)
+if v==s and r then
+UpdatePos(v)
+end
+end)
+end
+
+local function CustomSize(p)
+local q,r,s,t
+
+local u,v
+local w,x
+
+if m then
+u,v=100,100
+w,x=470,270
+else
+u,v=100,100
+w,x=640,400
+end
+
+p.Size=UDim2.new(0,w,0,x)
+
+local y=Instance.new"Frame"
+y.AnchorPoint=Vector2.new(1,1)
+y.BackgroundTransparency=1
+y.Size=UDim2.new(0,40,0,40)
+y.Position=UDim2.new(1,20,1,20)
+y.Name="changesizeobject"
+y.Parent=p
+
+local function UpdateSize(z)
+local A=z.Position-s
+local B=t.X.Offset+A.X
+local C=t.Y.Offset+A.Y
+
+B=math.max(B,u)
+C=math.max(C,v)
+
+local D=h:Create(p,TweenInfo.new(0.2),{Size=UDim2.new(0,B,0,C)})
+D:Play()
+end
+
+y.InputBegan:Connect(function(z)
+if z.UserInputType==Enum.UserInputType.MouseButton1 or z.UserInputType==Enum.UserInputType.Touch then
+q=true
+s=z.Position
+t=p.Size
+z.Changed:Connect(function()
+if z.UserInputState==Enum.UserInputState.End then
+q=false
+end
+end)
+end
+end)
+
+y.InputChanged:Connect(function(z)
+if z.UserInputType==Enum.UserInputType.MouseMovement or z.UserInputType==Enum.UserInputType.Touch then
+r=z
+end
+end)
+
+g.InputChanged:Connect(function(z)
+if z==r and q then
+UpdateSize(z)
+end
+end)
+end
+
+CustomSize(o)
+CustomPos(n,o)
+end
+
+function CircleClick(n,o,p)
+spawn(function()
+n.ClipsDescendants=true
+local q=Instance.new"ImageLabel"
+q.Image="rbxassetid://266543268"
+q.ImageColor3=Color3.fromRGB(80,80,80)
+q.ImageTransparency=0.8999999761581421
+q.BackgroundColor3=Color3.fromRGB(255,255,255)
+q.BackgroundTransparency=1
+q.ZIndex=10
+q.Name="Circle"
+q.Parent=n
+
+local r=o-q.AbsolutePosition.X
+local s=p-q.AbsolutePosition.Y
+q.Position=UDim2.new(0,r,0,s)
+local t=0
+if n.AbsoluteSize.X>n.AbsoluteSize.Y then
+t=n.AbsoluteSize.X*1.5
+elseif n.AbsoluteSize.X<n.AbsoluteSize.Y then
+t=n.AbsoluteSize.Y*1.5
+elseif n.AbsoluteSize.X==n.AbsoluteSize.Y then
+t=n.AbsoluteSize.X*1.5
+end
+
+local u=0.5
+q:TweenSizeAndPosition(UDim2.new(0,t,0,t),UDim2.new(0.5,-t/2,0.5,-t/2),"Out","Quad",
+u,false,nil)
+for v=1,10 do
+q.ImageTransparency=q.ImageTransparency+0.01
+wait(u/10)
+end
+q:Destroy()
+end)
+end
+
+local n={}
+function n.MakeNotify(o,p)
+local q=p or{}
+q.Title=q.Title or"Noctis"
+q.Description=q.Description or"Notification"
+q.Content=q.Content or"Content"
+q.Color=q.Color or Color3.fromRGB(255,0,255)
+q.Time=q.Time or 0.5
+q.Delay=q.Delay or 5
+local r={}
+spawn(function()
+if not k:FindFirstChild"NotifyGui"then
+local s=Instance.new"ScreenGui";
+s.ZIndexBehavior=Enum.ZIndexBehavior.Sibling
+s.Name="NotifyGui"
+s.Parent=k
+end
+if not k.NotifyGui:FindFirstChild"NotifyLayout"then
+local s=Instance.new"Frame";
+s.AnchorPoint=Vector2.new(1,1)
+s.BackgroundColor3=Color3.fromRGB(255,255,255)
+s.BackgroundTransparency=0.9990000128746033
+s.BorderColor3=Color3.fromRGB(0,0,0)
+s.BorderSizePixel=0
+s.Position=UDim2.new(1,-30,1,-30)
+s.Size=UDim2.new(0,320,1,0)
+s.Name="NotifyLayout"
+s.Parent=k.NotifyGui
+local t=0
+k.NotifyGui.NotifyLayout.ChildRemoved:Connect(function()
+t=0
+for u,v in k.NotifyGui.NotifyLayout:GetChildren()do
+h:Create(
+v,
+TweenInfo.new(0.3,Enum.EasingStyle.Quad,Enum.EasingDirection.InOut),
+{Position=UDim2.new(0,0,1,-((v.Size.Y.Offset+12)*t))}
+):Play()
+t=t+1
+end
+end)
+end
+local s=0
+for t,u in k.NotifyGui.NotifyLayout:GetChildren()do
+s=-(u.Position.Y.Offset)+u.Size.Y.Offset+12
+end
+local t=Instance.new"Frame";
+local u=Instance.new"Frame";
+local v=Instance.new"UICorner";
+local w=Instance.new"Frame";
+Instance.new"ImageLabel";
+local x=Instance.new"Frame";
+local y=Instance.new"TextLabel";
+local z=Instance.new"UICorner";
+local A=Instance.new"TextLabel";
+local B=Instance.new"TextButton";
+local C=Instance.new"ImageLabel";
+local D=Instance.new"TextLabel";
+
+t.BackgroundColor3=Color3.fromRGB(0,0,0)
+t.BorderColor3=Color3.fromRGB(0,0,0)
+t.BorderSizePixel=0
+t.Size=UDim2.new(1,0,0,150)
+t.Name="NotifyFrame"
+t.BackgroundTransparency=1
+t.Parent=k.NotifyGui.NotifyLayout
+t.AnchorPoint=Vector2.new(0,1)
+t.Position=UDim2.new(0,0,1,-(s))
+
+u.BackgroundColor3=Color3.fromRGB(0,0,0)
+u.BorderColor3=Color3.fromRGB(0,0,0)
+u.BorderSizePixel=0
+u.Position=UDim2.new(0,400,0,0)
+u.Size=UDim2.new(1,0,1,0)
+u.Name="NotifyFrameReal"
+u.Parent=t
+
+v.Parent=u
+v.CornerRadius=UDim.new(0,8)
+
+w.BackgroundTransparency=1
+w.BorderSizePixel=0
+w.Size=UDim2.new(1,0,1,0)
+w.ZIndex=0
+w.Name="DropShadowHolder"
+w.Parent=u
+
+x.BackgroundColor3=Color3.fromRGB(0,0,0)
+x.BackgroundTransparency=0.9990000128746033
+x.BorderColor3=Color3.fromRGB(0,0,0)
+x.BorderSizePixel=0
+x.Size=UDim2.new(1,0,0,36)
+x.Name="Top"
+x.Parent=u
+
+y.Font=Enum.Font.GothamBold
+y.Text=q.Title
+y.TextColor3=Color3.fromRGB(255,255,255)
+y.TextSize=14
+y.TextXAlignment=Enum.TextXAlignment.Left
+y.BackgroundColor3=Color3.fromRGB(255,255,255)
+y.BackgroundTransparency=0.9990000128746033
+y.BorderColor3=Color3.fromRGB(0,0,0)
+y.BorderSizePixel=0
+y.Size=UDim2.new(1,0,1,0)
+y.Parent=x
+y.Position=UDim2.new(0,10,0,0)
+
+z.Parent=x
+z.CornerRadius=UDim.new(0,5)
+
+A.Font=Enum.Font.GothamBold
+A.Text=q.Description
+A.TextColor3=q.Color
+A.TextSize=14
+A.TextXAlignment=Enum.TextXAlignment.Left
+A.BackgroundColor3=Color3.fromRGB(255,255,255)
+A.BackgroundTransparency=0.9990000128746033
+A.BorderColor3=Color3.fromRGB(0,0,0)
+A.BorderSizePixel=0
+A.Size=UDim2.new(1,0,1,0)
+A.Position=UDim2.new(0,y.TextBounds.X+15,0,0)
+A.Parent=x
+
+B.Font=Enum.Font.SourceSans
+B.Text=""
+B.TextColor3=Color3.fromRGB(0,0,0)
+B.TextSize=14
+B.AnchorPoint=Vector2.new(1,0.5)
+B.BackgroundColor3=Color3.fromRGB(255,255,255)
+B.BackgroundTransparency=0.9990000128746033
+B.BorderColor3=Color3.fromRGB(0,0,0)
+B.BorderSizePixel=0
+B.Position=UDim2.new(1,-5,0.5,0)
+B.Size=UDim2.new(0,25,0,25)
+B.Name="Close"
+B.Parent=x
+
+C.Image="rbxassetid://9886659671"
+C.AnchorPoint=Vector2.new(0.5,0.5)
+C.BackgroundColor3=Color3.fromRGB(255,255,255)
+C.BackgroundTransparency=0.9990000128746033
+C.BorderColor3=Color3.fromRGB(0,0,0)
+C.BorderSizePixel=0
+C.Position=UDim2.new(0.49000001,0,0.5,0)
+C.Size=UDim2.new(1,-8,1,-8)
+C.Parent=B
+
+D.Font=Enum.Font.GothamBold
+D.TextColor3=Color3.fromRGB(255,255,255)
+D.TextSize=13
+D.Text=q.Content
+D.TextXAlignment=Enum.TextXAlignment.Left
+D.TextYAlignment=Enum.TextYAlignment.Top
+D.BackgroundColor3=Color3.fromRGB(255,255,255)
+D.BackgroundTransparency=0.9990000128746033
+D.TextColor3=Color3.fromRGB(150.0000062584877,150.0000062584877,150.0000062584877)
+D.BorderColor3=Color3.fromRGB(0,0,0)
+D.BorderSizePixel=0
+D.Position=UDim2.new(0,10,0,27)
+D.Parent=u
+D.Size=UDim2.new(1,-20,0,13)
+
+D.Size=UDim2.new(1,-20,0,13+(13*(D.TextBounds.X//D.AbsoluteSize.X)))
+D.TextWrapped=true
+
+if D.AbsoluteSize.Y<27 then
+t.Size=UDim2.new(1,0,0,65)
+else
+t.Size=UDim2.new(1,0,0,D.AbsoluteSize.Y+40)
+end
+local E=false
+function r.Close(F)
+if E then
+return false
+end
+E=true
+h:Create(
+u,
+TweenInfo.new(tonumber(q.Time),Enum.EasingStyle.Back,Enum.EasingDirection.InOut),
+{Position=UDim2.new(0,400,0,0)}
+):Play()
+task.wait(tonumber(q.Time)/1.2)
+t:Destroy()
+end
+
+B.Activated:Connect(function()
+r:Close()
+end)
+h:Create(
+u,
+TweenInfo.new(tonumber(q.Time),Enum.EasingStyle.Back,Enum.EasingDirection.InOut),
+{Position=UDim2.new(0,0,0,0)}
+):Play()
+task.wait(tonumber(q.Delay))
+r:Close()
+end)
+return r
+end
+
+function chloex(o,p,q,r,s)
+return n:MakeNotify{
+Title=r or"Noctis",
+Description=s or"Notification",
+Content=o or"Content",
+Color=q or Color3.fromRGB(138,43,226),
+Delay=p or 4
+}
+end
+
+function n.Window(o,p)
+p=p or{}
+p.Title=p.Title or"Chloe X"
+p.Footer=p.Footer or"Chloee :3"
+p.Color=p.Color or Color3.fromRGB(255,0,255)
+p["Tab Width"]=p["Tab Width"]or 120
+p.Version=p.Version or 1
+
+CURRENT_VERSION=p.Version
+
+
+local q=GetAutoload()
+if q then
+LoadConfig(q)
+else
+
+ConfigData={_version=CURRENT_VERSION}
+end
+
+local r={}
+
+local s=Instance.new"ScreenGui";
+local t=Instance.new"Frame";
+local u=Instance.new"ImageLabel";
+local v=Instance.new"Frame";
+local w=Instance.new"UICorner";
+local x=Instance.new"Frame";
+local y=Instance.new"TextLabel";
+local z=Instance.new"UICorner";
+local A=Instance.new"TextLabel";
+local B=Instance.new"TextButton";
+local C=Instance.new"ImageLabel";
+local D=Instance.new"TextButton";
+local E=Instance.new"ImageLabel";
+local F=Instance.new"Frame";
+local G=Instance.new"UICorner";
+local H=Instance.new"Frame";
+local I=Instance.new"Frame";
+local J=Instance.new"UICorner";
+local K=Instance.new"TextLabel";
+local L=Instance.new"Frame";
+local M=Instance.new"Folder";
+local N=Instance.new"UIPageLayout";
+
+s.ZIndexBehavior=Enum.ZIndexBehavior.Sibling
+s.Name="Chloeex"
+s.ResetOnSpawn=false
+s.Parent=game:GetService"CoreGui"
+
+t.BackgroundTransparency=1
+t.BorderSizePixel=0
+t.AnchorPoint=Vector2.new(0.5,0.5)
+t.Position=UDim2.new(0.5,0,0.5,0)
+if m then
+t.Size=safeSize(470,270)
+else
+t.Size=safeSize(640,400)
+end
+t.ZIndex=0
+t.Name="DropShadowHolder"
+t.Parent=s
+
+t.Position=UDim2.new(0,(s.AbsoluteSize.X//2-t.Size.X.Offset//2),0,
+(s.AbsoluteSize.Y//2-t.Size.Y.Offset//2))
+u.Image="rbxassetid://6015897843"
+u.ImageColor3=Color3.fromRGB(15,15,15)
+u.ImageTransparency=1
+u.ScaleType=Enum.ScaleType.Slice
+u.SliceCenter=Rect.new(49,49,450,450)
+u.AnchorPoint=Vector2.new(0.5,0.5)
+u.BackgroundTransparency=1
+u.BorderSizePixel=0
+u.Position=UDim2.new(0.5,0,0.5,0)
+u.Size=UDim2.new(1,47,1,47)
+u.ZIndex=0
+u.Name="DropShadow"
+u.Parent=t
+
+if p.Theme then
+v:Destroy()
+v=Instance.new"ImageLabel"
+v.Image="rbxassetid://"..p.Theme
+v.ScaleType=Enum.ScaleType.Crop
+v.BackgroundTransparency=1
+v.ImageTransparency=p.ThemeTransparency or 0.15
+else
+v.BackgroundColor3=Color3.fromRGB(0,0,0)
+v.BackgroundTransparency=0
+end
+
+v.AnchorPoint=Vector2.new(0.5,0.5)
+v.BorderColor3=Color3.fromRGB(0,0,0)
+v.BorderSizePixel=0
+v.Position=UDim2.new(0.5,0,0.5,0)
+v.Size=UDim2.new(1,-47,1,-47)
+v.Name="Main"
+v.Parent=u
+
+w.Parent=v
+
+x.BackgroundColor3=Color3.fromRGB(0,0,0)
+x.BackgroundTransparency=0.9990000128746033
+x.BorderColor3=Color3.fromRGB(0,0,0)
+x.BorderSizePixel=0
+x.Size=UDim2.new(1,0,0,38)
+x.Name="Top"
+x.Parent=v
+
+y.Font=Enum.Font.GothamBold
+y.Text=p.Title
+y.TextColor3=p.Color
+y.TextSize=14
+y.TextXAlignment=Enum.TextXAlignment.Left
+y.BackgroundColor3=Color3.fromRGB(255,255,255)
+y.BackgroundTransparency=0.9990000128746033
+y.BorderColor3=Color3.fromRGB(0,0,0)
+y.BorderSizePixel=0
+y.Size=UDim2.new(1,-100,1,0)
+y.Position=UDim2.new(0,10,0,0)
+y.Parent=x
+
+z.Parent=x
+
+A.Font=Enum.Font.GothamBold
+A.Text=p.Footer
+A.TextColor3=p.Color
+A.TextSize=14
+A.TextXAlignment=Enum.TextXAlignment.Left
+A.BackgroundColor3=Color3.fromRGB(255,255,255)
+A.BackgroundTransparency=0.9990000128746033
+A.BorderColor3=Color3.fromRGB(0,0,0)
+A.BorderSizePixel=0
+A.Size=UDim2.new(1,-(y.TextBounds.X+104),1,0)
+A.Position=UDim2.new(0,y.TextBounds.X+15,0,0)
+A.Parent=x
+
+B.Font=Enum.Font.SourceSans
+B.Text=""
+B.TextColor3=Color3.fromRGB(0,0,0)
+B.TextSize=14
+B.AnchorPoint=Vector2.new(1,0.5)
+B.BackgroundColor3=Color3.fromRGB(255,255,255)
+B.BackgroundTransparency=0.9990000128746033
+B.BorderColor3=Color3.fromRGB(0,0,0)
+B.BorderSizePixel=0
+B.Position=UDim2.new(1,-8,0.5,0)
+B.Size=UDim2.new(0,25,0,25)
+B.Name="Close"
+B.Parent=x
+
+C.Image="rbxassetid://9886659671"
+C.AnchorPoint=Vector2.new(0.5,0.5)
+C.BackgroundColor3=Color3.fromRGB(255,255,255)
+C.BackgroundTransparency=0.9990000128746033
+C.BorderColor3=Color3.fromRGB(0,0,0)
+C.BorderSizePixel=0
+C.Position=UDim2.new(0.49,0,0.5,0)
+C.Size=UDim2.new(1,-8,1,-8)
+C.Parent=B
+
+D.Font=Enum.Font.SourceSans
+D.Text=""
+D.TextColor3=Color3.fromRGB(0,0,0)
+D.TextSize=14
+D.AnchorPoint=Vector2.new(1,0.5)
+D.BackgroundColor3=Color3.fromRGB(255,255,255)
+D.BackgroundTransparency=0.9990000128746033
+D.BorderColor3=Color3.fromRGB(0,0,0)
+D.BorderSizePixel=0
+D.Position=UDim2.new(1,-38,0.5,0)
+D.Size=UDim2.new(0,25,0,25)
+D.Name="Min"
+D.Parent=x
+
+E.Image="rbxassetid://9886659276"
+E.AnchorPoint=Vector2.new(0.5,0.5)
+E.BackgroundColor3=Color3.fromRGB(255,255,255)
+E.BackgroundTransparency=0.9990000128746033
+E.ImageTransparency=0.2
+E.BorderColor3=Color3.fromRGB(0,0,0)
+E.BorderSizePixel=0
+E.Position=UDim2.new(0.5,0,0.5,0)
+E.Size=UDim2.new(1,-9,1,-9)
+E.Parent=D
+
+F.BackgroundColor3=Color3.fromRGB(255,255,255)
+F.BackgroundTransparency=0.9990000128746033
+F.BorderColor3=Color3.fromRGB(0,0,0)
+F.BorderSizePixel=0
+F.Position=UDim2.new(0,9,0,50)
+F.Size=UDim2.new(0,p["Tab Width"],1,-59)
+F.Name="LayersTab"
+F.Parent=v
+
+G.CornerRadius=UDim.new(0,2)
+G.Parent=F
+
+H.AnchorPoint=Vector2.new(0.5,0)
+H.BackgroundColor3=Color3.fromRGB(255,255,255)
+H.BackgroundTransparency=0.85
+H.BorderColor3=Color3.fromRGB(0,0,0)
+H.BorderSizePixel=0
+H.Position=UDim2.new(0.5,0,0,38)
+H.Size=UDim2.new(1,0,0,1)
+H.Name="DecideFrame"
+H.Parent=v
+
+I.BackgroundColor3=Color3.fromRGB(255,255,255)
+I.BackgroundTransparency=0.9990000128746033
+I.BorderColor3=Color3.fromRGB(0,0,0)
+I.BorderSizePixel=0
+I.Position=UDim2.new(0,p["Tab Width"]+18,0,50)
+I.Size=UDim2.new(1,-(p["Tab Width"]+9+18),1,-59)
+I.Name="Layers"
+I.Parent=v
+
+J.CornerRadius=UDim.new(0,2)
+J.Parent=I
+
+K.Font=Enum.Font.GothamBold
+K.Text=""
+K.TextColor3=Color3.fromRGB(255,255,255)
+K.TextSize=24
+K.TextWrapped=true
+K.TextXAlignment=Enum.TextXAlignment.Left
+K.BackgroundColor3=Color3.fromRGB(255,255,255)
+K.BackgroundTransparency=0.9990000128746033
+K.BorderColor3=Color3.fromRGB(0,0,0)
+K.BorderSizePixel=0
+K.Size=UDim2.new(1,0,0,30)
+K.Name="NameTab"
+K.Parent=I
+
+L.AnchorPoint=Vector2.new(0,1)
+L.BackgroundColor3=Color3.fromRGB(255,255,255)
+L.BackgroundTransparency=0.9990000128746033
+L.BorderColor3=Color3.fromRGB(0,0,0)
+L.BorderSizePixel=0
+L.ClipsDescendants=true
+L.Position=UDim2.new(0,0,1,0)
+L.Size=UDim2.new(1,0,1,-33)
+L.Name="LayersReal"
+L.Parent=I
+
+M.Name="LayersFolder"
+M.Parent=L
+
+N.SortOrder=Enum.SortOrder.LayoutOrder
+N.Name="LayersPageLayout"
+N.Parent=M
+N.TweenTime=0.5
+N.EasingDirection=Enum.EasingDirection.InOut
+N.EasingStyle=Enum.EasingStyle.Quad
+
+local O=Instance.new"ScrollingFrame";
+local P=Instance.new"UIListLayout";
+
+O.CanvasSize=UDim2.new(0,0,1.10000002,0)
+O.ScrollBarImageColor3=Color3.fromRGB(0,0,0)
+O.ScrollBarThickness=0
+O.Active=true
+O.BackgroundColor3=Color3.fromRGB(255,255,255)
+O.BackgroundTransparency=0.9990000128746033
+O.BorderColor3=Color3.fromRGB(0,0,0)
+O.BorderSizePixel=0
+O.Size=UDim2.new(1,0,1,0)
+O.Name="ScrollTab"
+O.Parent=F
+
+P.Padding=UDim.new(0,3)
+P.SortOrder=Enum.SortOrder.LayoutOrder
+P.Parent=O
+
+local function UpdateSize1()
+local Q=0
+for R,S in O:GetChildren()do
+if S.Name~="UIListLayout"then
+Q=Q+3+S.Size.Y.Offset
+end
+end
+O.CanvasSize=UDim2.new(0,0,0,Q)
+end
+O.ChildAdded:Connect(UpdateSize1)
+O.ChildRemoved:Connect(UpdateSize1)
+
+function r.DestroyGui(Q)
+if k:FindFirstChild"Chloeex"then
+s:Destroy()
+end
+end
+
+D.Activated:Connect(function()
+CircleClick(D,j.X,j.Y)
+t.Visible=false
+end)
+B.Activated:Connect(function()
+CircleClick(B,j.X,j.Y)
+
+local Q=Instance.new"Frame"
+Q.Size=UDim2.new(1,0,1,0)
+Q.BackgroundColor3=Color3.fromRGB(0,0,0)
+Q.BackgroundTransparency=0.3
+Q.ZIndex=50
+Q.Parent=t
+
+local R=Instance.new"ImageLabel"
+R.Size=UDim2.new(0,300,0,150)
+R.Position=UDim2.new(0.5,-150,0.5,-75)
+R.Image="rbxassetid://107443308956559"
+R.ImageTransparency=0
+R.BorderSizePixel=0
+R.ZIndex=51
+R.Parent=Q
+local S=Instance.new("UICorner",R)
+S.CornerRadius=UDim.new(0,8)
+
+local T=Instance.new"Frame"
+T.Size=UDim2.new(0,310,0,160)
+T.Position=UDim2.new(0.5,-155,0.5,-80)
+T.BackgroundColor3=Color3.fromRGB(255,255,255)
+T.BackgroundTransparency=0.75
+T.BorderSizePixel=0
+T.ZIndex=50
+T.Parent=Q
+
+local U=Instance.new("UICorner",T)
+U.CornerRadius=UDim.new(0,10)
+
+local V=Instance.new"UIGradient"
+V.Color=ColorSequence.new{
+ColorSequenceKeypoint.new(0.0,Color3.fromRGB(0,191,255)),
+ColorSequenceKeypoint.new(0.25,Color3.fromRGB(255,255,255)),
+ColorSequenceKeypoint.new(0.5,Color3.fromRGB(0,140,255)),
+ColorSequenceKeypoint.new(0.75,Color3.fromRGB(255,255,255)),
+ColorSequenceKeypoint.new(1.0,Color3.fromRGB(0,191,255))
+}
+V.Rotation=90
+V.Parent=T
+
+local W=Instance.new"TextLabel"
+W.Size=UDim2.new(1,0,0,40)
+W.Position=UDim2.new(0,0,0,4)
+W.BackgroundTransparency=1
+W.Font=Enum.Font.GothamBold
+W.Text="Noctis | Window"
+W.TextSize=22
+W.TextColor3=Color3.fromRGB(255,255,255)
+W.ZIndex=52
+W.Parent=R
+
+local X=Instance.new"TextLabel"
+X.Size=UDim2.new(1,-20,0,60)
+X.Position=UDim2.new(0,10,0,30)
+X.BackgroundTransparency=1
+X.Font=Enum.Font.Gotham
+X.Text="Do you want to close this window?\nYou will not be able to open it again"
+X.TextSize=14
+X.TextColor3=Color3.fromRGB(200,200,200)
+X.TextWrapped=true
+X.ZIndex=52
+X.Parent=R
+
+local Y=Instance.new"TextButton"
+Y.Size=UDim2.new(0.45,-10,0,35)
+Y.Position=UDim2.new(0.05,0,1,-55)
+Y.BackgroundColor3=Color3.fromRGB(255,255,255)
+Y.BackgroundTransparency=0.935
+Y.Text="Yes"
+Y.Font=Enum.Font.GothamBold
+Y.TextSize=15
+Y.TextColor3=Color3.fromRGB(255,255,255)
+Y.TextTransparency=0.3
+Y.ZIndex=52
+Y.Name="Yes"
+Y.Parent=R
+Instance.new("UICorner",Y).CornerRadius=UDim.new(0,6)
+
+local Z=Instance.new"TextButton"
+Z.Size=UDim2.new(0.45,-10,0,35)
+Z.Position=UDim2.new(0.5,10,1,-55)
+Z.BackgroundColor3=Color3.fromRGB(255,255,255)
+Z.BackgroundTransparency=0.935
+Z.Text="Cancel"
+Z.Font=Enum.Font.GothamBold
+Z.TextSize=15
+Z.TextColor3=Color3.fromRGB(255,255,255)
+Z.TextTransparency=0.3
+Z.ZIndex=52
+Z.Name="Cancel"
+Z.Parent=R
+Instance.new("UICorner",Z).CornerRadius=UDim.new(0,6)
+
+Y.MouseButton1Click:Connect(function()
+if s then s:Destroy()end
+if game.CoreGui:FindFirstChild"ToggleUIButton"then
+game.CoreGui.ToggleUIButton:Destroy()
+end
+end)
+
+Z.MouseButton1Click:Connect(function()
+Q:Destroy()
+end)
+end)
+
+local Q=Enum.KeyCode.G
+g.InputBegan:Connect(function(R,S)
+if S then return end
+if R.KeyCode==Q then
+if t then
+t.Visible=not t.Visible
+end
+end
+end)
+
+function r.ToggleUI(R)
+local S=Instance.new"ScreenGui"
+S.Parent=game:GetService"CoreGui"
+S.ZIndexBehavior=Enum.ZIndexBehavior.Sibling
+S.Name="ToggleUIButton"
+
+local T=Instance.new"ImageLabel"
+T.Parent=S
+T.Size=UDim2.new(0,40,0,40)
+T.Position=UDim2.new(0,20,0,100)
+T.BackgroundTransparency=1
+T.Image="rbxassetid://"..p.Image
+T.ScaleType=Enum.ScaleType.Fit
+
+local U=Instance.new"UICorner"
+U.CornerRadius=UDim.new(0,6)
+U.Parent=T
+
+local V=Instance.new"TextButton"
+V.Parent=T
+V.Size=UDim2.new(1,0,1,0)
+V.BackgroundTransparency=1
+V.Text=""
+
+V.MouseButton1Click:Connect(function()
+if t then
+t.Visible=not t.Visible
+end
+end)
+
+local W=false
+local X,Y
+
+local function update(Z)
+local _=Z.Position-X
+T.Position=UDim2.new(
+Y.X.Scale,
+Y.X.Offset+_.X,
+Y.Y.Scale,
+Y.Y.Offset+_.Y
+)
+end
+
+V.InputBegan:Connect(function(Z)
+if Z.UserInputType==Enum.UserInputType.MouseButton1 or Z.UserInputType==Enum.UserInputType.Touch then
+W=true
+X=Z.Position
+Y=T.Position
+Z.Changed:Connect(function()
+if Z.UserInputState==Enum.UserInputState.End then
+W=false
+end
+end)
+end
+end)
+
+game:GetService"UserInputService".InputChanged:Connect(function(Z)
+if W and(Z.UserInputType==Enum.UserInputType.MouseMovement or Z.UserInputType==Enum.UserInputType.Touch)then
+update(Z)
+end
+end)
+end
+
+r:ToggleUI()
+
+t.Size=UDim2.new(0,115+y.TextBounds.X+1+A.TextBounds.X,0,350)
+MakeDraggable(x,t)
+
+local R=Instance.new"Frame";
+local S=Instance.new"Frame";
+local T=Instance.new"ImageLabel";
+local U=Instance.new"UICorner";
+local V=Instance.new"TextButton";
+
+R.AnchorPoint=Vector2.new(1,1)
+R.BackgroundColor3=Color3.fromRGB(0,0,0)
+R.BackgroundTransparency=0.999
+R.BorderColor3=Color3.fromRGB(0,0,0)
+R.BorderSizePixel=0
+R.ClipsDescendants=true
+R.Position=UDim2.new(1,8,1,8)
+R.Size=UDim2.new(1,154,1,54)
+R.Visible=false
+R.Name="MoreBlur"
+R.Parent=I
+
+S.BackgroundTransparency=1
+S.BorderSizePixel=0
+S.Size=UDim2.new(1,0,1,0)
+S.ZIndex=0
+S.Name="DropShadowHolder"
+S.Parent=R
+
+T.Image="rbxassetid://6015897843"
+T.ImageColor3=Color3.fromRGB(0,0,0)
+T.ImageTransparency=1
+T.ScaleType=Enum.ScaleType.Slice
+T.SliceCenter=Rect.new(49,49,450,450)
+T.AnchorPoint=Vector2.new(0.5,0.5)
+T.BackgroundTransparency=1
+T.BorderSizePixel=0
+T.Position=UDim2.new(0.5,0,0.5,0)
+T.Size=UDim2.new(1,35,1,35)
+T.ZIndex=0
+T.Name="DropShadow"
+T.Parent=S
+
+U.Parent=R
+
+V.Font=Enum.Font.SourceSans
+V.Text=""
+V.TextColor3=Color3.fromRGB(0,0,0)
+V.TextSize=14
+V.BackgroundColor3=Color3.fromRGB(255,255,255)
+V.BackgroundTransparency=0.999
+V.BorderColor3=Color3.fromRGB(0,0,0)
+V.BorderSizePixel=0
+V.Size=UDim2.new(1,0,1,0)
+V.Name="ConnectButton"
+V.Parent=R
+
+local W=Instance.new"Frame";
+local X=Instance.new"UICorner";
+local Y=Instance.new"UIStroke";
+local Z=Instance.new"Frame";
+local _=Instance.new"Folder";
+local aa=Instance.new"UIPageLayout";
+
+W.AnchorPoint=Vector2.new(1,0.5)
+W.BackgroundColor3=Color3.fromRGB(30.00000011175871,30.00000011175871,30.00000011175871)
+W.BorderColor3=Color3.fromRGB(0,0,0)
+W.BorderSizePixel=0
+W.LayoutOrder=1
+W.Position=UDim2.new(1,172,0.5,0)
+W.Size=UDim2.new(0,160,1,-16)
+W.Name="DropdownSelect"
+W.ClipsDescendants=true
+W.Parent=R
+
+V.Activated:Connect(function()
+if R.Visible then
+h:Create(R,TweenInfo.new(0.3),{BackgroundTransparency=0.999}):Play()
+h:Create(W,TweenInfo.new(0.3),{Position=UDim2.new(1,172,0.5,0)}):Play()
+task.wait(0.3)
+R.Visible=false
+end
+end)
+X.CornerRadius=UDim.new(0,3)
+X.Parent=W
+
+Y.Color=Color3.fromRGB(138,43,226)
+Y.Thickness=2.5
+Y.Transparency=0.8
+Y.Parent=W
+
+Z.AnchorPoint=Vector2.new(0.5,0.5)
+Z.BackgroundColor3=Color3.fromRGB(138,43,226)
+Z.BackgroundTransparency=0.7
+Z.BorderColor3=Color3.fromRGB(0,0,0)
+Z.BorderSizePixel=0
+Z.LayoutOrder=1
+Z.Position=UDim2.new(0.5,0,0.5,0)
+Z.Size=UDim2.new(1,1,1,1)
+Z.Name="DropdownSelectReal"
+Z.Parent=W
+
+_.Name="DropdownFolder"
+_.Parent=Z
+
+aa.EasingDirection=Enum.EasingDirection.InOut
+aa.EasingStyle=Enum.EasingStyle.Quad
+aa.TweenTime=0.009999999776482582
+aa.SortOrder=Enum.SortOrder.LayoutOrder
+aa.FillDirection=Enum.FillDirection.Vertical
+aa.Archivable=false
+aa.Name="DropPageLayout"
+aa.Parent=_
+
+local ab={}
+local ac=0
+local ad=0
+function ab.AddTab(ae,af)
+local ag=af or{}
+ag.Name=ag.Name or"Tab"
+ag.Icon=ag.Icon or""
+
+local ah=Instance.new"ScrollingFrame";
+local ai=Instance.new"UIListLayout";
+
+ah.ScrollBarImageColor3=Color3.fromRGB(80.00000283122063,80.00000283122063,80.00000283122063)
+ah.ScrollBarThickness=0
+ah.Active=true
+ah.LayoutOrder=ac
+ah.BackgroundColor3=Color3.fromRGB(255,255,255)
+ah.BackgroundTransparency=0.9990000128746033
+ah.BorderColor3=Color3.fromRGB(0,0,0)
+ah.BorderSizePixel=0
+ah.Size=UDim2.new(1,0,1,0)
+ah.Name="ScrolLayers"
+ah.Parent=M
+
+ai.Padding=UDim.new(0,3)
+ai.SortOrder=Enum.SortOrder.LayoutOrder
+ai.Parent=ah
+
+local aj=Instance.new"Frame";
+local ak=Instance.new"UICorner";
+local al=Instance.new"TextButton";
+local am=Instance.new"TextLabel"
+local an=Instance.new"ImageLabel";
+local ao=Instance.new"UIStroke";
+local ap=Instance.new"UICorner";
+
+aj.BackgroundColor3=Color3.fromRGB(255,255,255)
+if ac==0 then
+aj.BackgroundTransparency=0.9200000166893005
+else
+aj.BackgroundTransparency=0.9990000128746033
+end
+aj.BorderColor3=Color3.fromRGB(0,0,0)
+aj.BorderSizePixel=0
+aj.LayoutOrder=ac
+aj.Size=UDim2.new(1,0,0,30)
+aj.Name="Tab"
+aj.Parent=O
+
+ak.CornerRadius=UDim.new(0,4)
+ak.Parent=aj
+
+al.Font=Enum.Font.GothamBold
+al.Text=""
+al.TextColor3=Color3.fromRGB(255,255,255)
+al.TextSize=13
+al.TextXAlignment=Enum.TextXAlignment.Left
+al.BackgroundColor3=Color3.fromRGB(255,255,255)
+al.BackgroundTransparency=0.9990000128746033
+al.BorderColor3=Color3.fromRGB(0,0,0)
+al.BorderSizePixel=0
+al.Size=UDim2.new(1,0,1,0)
+al.Name="TabButton"
+al.Parent=aj
+
+am.Font=Enum.Font.GothamBold
+am.Text="| "..tostring(ag.Name)
+am.TextColor3=Color3.fromRGB(255,255,255)
+am.TextSize=13
+am.TextXAlignment=Enum.TextXAlignment.Left
+am.BackgroundColor3=Color3.fromRGB(255,255,255)
+am.BackgroundTransparency=0.9990000128746033
+am.BorderColor3=Color3.fromRGB(0,0,0)
+am.BorderSizePixel=0
+am.Size=UDim2.new(1,0,1,0)
+am.Position=UDim2.new(0,30,0,0)
+am.Name="TabName"
+am.Parent=aj
+
+an.BackgroundColor3=Color3.fromRGB(255,255,255)
+an.BackgroundTransparency=0.9990000128746033
+an.BorderColor3=Color3.fromRGB(0,0,0)
+an.BorderSizePixel=0
+an.Position=UDim2.new(0,9,0,7)
+an.Size=UDim2.new(0,16,0,16)
+an.Name="FeatureImg"
+an.Parent=aj
+if ac==0 then
+N:JumpToIndex(0)
+K.Text=ag.Name
+local aq=Instance.new"Frame";
+aq.BackgroundColor3=p.Color
+aq.BorderColor3=Color3.fromRGB(0,0,0)
+aq.BorderSizePixel=0
+aq.Position=UDim2.new(0,2,0,9)
+aq.Size=UDim2.new(0,1,0,12)
+aq.Name="ChooseFrame"
+aq.Parent=aj
+
+ao.Color=p.Color
+ao.Thickness=1.600000023841858
+ao.Parent=aq
+
+ap.Parent=aq
+end
+
+if ag.Icon~=""then
+if f[ag.Icon]then
+an.Image=f[ag.Icon]
+else
+an.Image=ag.Icon
+end
+end
+
+al.Activated:Connect(function()
+CircleClick(al,j.X,j.Y)
+local aq
+for ar,as in O:GetChildren()do
+for at,au in as:GetChildren()do
+if au.Name=="ChooseFrame"then
+aq=au
+break
+end
+end
+end
+if aq~=nil and aj.LayoutOrder~=N.CurrentPage.LayoutOrder then
+for ar,as in O:GetChildren()do
+if as.Name=="Tab"then
+h:Create(
+as,
+TweenInfo.new(0.3,Enum.EasingStyle.Back,Enum.EasingDirection.InOut),
+{BackgroundTransparency=0.9990000128746033}
+):Play()
+end
+end
+h:Create(
+aj,
+TweenInfo.new(0.6,Enum.EasingStyle.Back,Enum.EasingDirection.InOut),
+{BackgroundTransparency=0.9200000166893005}
+):Play()
+h:Create(
+aq,
+TweenInfo.new(0.5,Enum.EasingStyle.Quad,Enum.EasingDirection.InOut),
+{Position=UDim2.new(0,2,0,9+(33*aj.LayoutOrder))}
+):Play()
+N:JumpToIndex(aj.LayoutOrder)
+task.wait(0.05)
+K.Text=ag.Name
+h:Create(
+aq,
+TweenInfo.new(0.35,Enum.EasingStyle.Quad,Enum.EasingDirection.InOut),
+{Size=UDim2.new(0,1,0,20)}
+):Play()
+task.wait(0.2)
+h:Create(
+aq,
+TweenInfo.new(0.25,Enum.EasingStyle.Quad,Enum.EasingDirection.InOut),
+{Size=UDim2.new(0,1,0,12)}
+):Play()
+end
+end)
+
+local aq={}
+local ar=0
+function aq.AddSection(as,at,au)
+local av=at or"Title"
+local aw=Instance.new"Frame";
+local ax=Instance.new"Frame";
+local ay=Instance.new"UICorner";
+local az=Instance.new"UIGradient";
+
+aw.BackgroundColor3=Color3.fromRGB(255,255,255)
+aw.BackgroundTransparency=0.9990000128746033
+aw.BorderColor3=Color3.fromRGB(0,0,0)
+aw.BorderSizePixel=0
+aw.LayoutOrder=ar
+aw.ClipsDescendants=true
+aw.LayoutOrder=1
+aw.Size=UDim2.new(1,0,0,30)
+aw.Name="Section"
+aw.Parent=ah
+
+local aA=Instance.new"Frame";
+local aB=Instance.new"UICorner";
+Instance.new"UIStroke";
+local aC=Instance.new"TextButton";
+local aD=Instance.new"Frame";
+local aE=Instance.new"ImageLabel";
+local aF=Instance.new"TextLabel";
+
+aA.AnchorPoint=Vector2.new(0.5,0)
+aA.BackgroundColor3=Color3.fromRGB(255,255,255)
+aA.BackgroundTransparency=0.9350000023841858
+aA.BorderColor3=Color3.fromRGB(0,0,0)
+aA.BorderSizePixel=0
+aA.LayoutOrder=1
+aA.Position=UDim2.new(0.5,0,0,0)
+aA.Size=UDim2.new(1,1,0,30)
+aA.Name="SectionReal"
+aA.Parent=aw
+
+aB.CornerRadius=UDim.new(0,4)
+aB.Parent=aA
+
+aC.Font=Enum.Font.SourceSans
+aC.Text=""
+aC.TextColor3=Color3.fromRGB(0,0,0)
+aC.TextSize=14
+aC.BackgroundColor3=Color3.fromRGB(255,255,255)
+aC.BackgroundTransparency=0.9990000128746033
+aC.BorderColor3=Color3.fromRGB(0,0,0)
+aC.BorderSizePixel=0
+aC.Size=UDim2.new(1,0,1,0)
+aC.Name="SectionButton"
+aC.Parent=aA
+
+aD.AnchorPoint=Vector2.new(1,0.5)
+aD.BackgroundColor3=Color3.fromRGB(0,0,0)
+aD.BackgroundTransparency=0.9990000128746033
+aD.BorderColor3=Color3.fromRGB(0,0,0)
+aD.BorderSizePixel=0
+aD.Position=UDim2.new(1,-5,0.5,0)
+aD.Size=UDim2.new(0,20,0,20)
+aD.Name="FeatureFrame"
+aD.Parent=aA
+
+aE.Image="rbxassetid://16851841101"
+aE.AnchorPoint=Vector2.new(0.5,0.5)
+aE.BackgroundColor3=Color3.fromRGB(255,255,255)
+aE.BackgroundTransparency=0.9990000128746033
+aE.BorderColor3=Color3.fromRGB(0,0,0)
+aE.BorderSizePixel=0
+aE.Position=UDim2.new(0.5,0,0.5,0)
+aE.Rotation=-90
+aE.Size=UDim2.new(1,6,1,6)
+aE.Name="FeatureImg"
+aE.Parent=aD
+
+aF.Font=Enum.Font.GothamBold
+aF.Text=av
+aF.TextColor3=Color3.fromRGB(230.77499270439148,230.77499270439148,230.77499270439148)
+aF.TextSize=13
+aF.TextXAlignment=Enum.TextXAlignment.Left
+aF.TextYAlignment=Enum.TextYAlignment.Top
+aF.AnchorPoint=Vector2.new(0,0.5)
+aF.BackgroundColor3=Color3.fromRGB(255,255,255)
+aF.BackgroundTransparency=0.9990000128746033
+aF.BorderColor3=Color3.fromRGB(0,0,0)
+aF.BorderSizePixel=0
+aF.Position=UDim2.new(0,10,0.5,0)
+aF.Size=UDim2.new(1,-50,0,13)
+aF.Name="SectionTitle"
+aF.Parent=aA
+
+ax.BackgroundColor3=Color3.fromRGB(255,255,255)
+ax.BorderColor3=Color3.fromRGB(0,0,0)
+ax.AnchorPoint=Vector2.new(0.5,0)
+ax.BorderSizePixel=0
+ax.Position=UDim2.new(0.5,0,0,33)
+ax.Size=UDim2.new(0,0,0,2)
+ax.Name="SectionDecideFrame"
+ax.Parent=aw
+
+ay.Parent=ax
+
+az.Color=ColorSequence.new{
+ColorSequenceKeypoint.new(0,Color3.fromRGB(20,20,20)),
+ColorSequenceKeypoint.new(0.5,p.Color),
+ColorSequenceKeypoint.new(1,Color3.fromRGB(20,20,20))
+}
+az.Parent=ax
+
+
+local aG=Instance.new"Frame";
+local aH=Instance.new"UICorner";
+local aI=Instance.new"UIListLayout";
+
+aG.AnchorPoint=Vector2.new(0.5,0)
+aG.BackgroundColor3=Color3.fromRGB(255,255,255)
+aG.BackgroundTransparency=0.9990000128746033
+aG.BorderColor3=Color3.fromRGB(0,0,0)
+aG.BorderSizePixel=0
+aG.ClipsDescendants=true
+aG.LayoutOrder=1
+aG.Position=UDim2.new(0.5,0,0,38)
+aG.Size=UDim2.new(1,0,0,100)
+aG.Name="SectionAdd"
+aG.Parent=aw
+
+aH.CornerRadius=UDim.new(0,2)
+aH.Parent=aG
+
+aI.Padding=UDim.new(0,3)
+aI.SortOrder=Enum.SortOrder.LayoutOrder
+aI.Parent=aG
+
+local aJ=false
+
+local function UpdateSizeScroll()
+local aK=0
+for aL,aM in ah:GetChildren()do
+if aM.Name~="UIListLayout"then
+aK=aK+3+aM.Size.Y.Offset
+end
+end
+ah.CanvasSize=UDim2.new(0,0,0,aK)
+end
+
+local function UpdateSizeSection()
+if aJ then
+local aK=38
+for aL,aM in aG:GetChildren()do
+if aM.Name~="UIListLayout"and aM.Name~="UICorner"then
+aK=aK+aM.Size.Y.Offset+3
+end
+end
+h:Create(aD,TweenInfo.new(0.5),{Rotation=90}):Play()
+h:Create(aw,TweenInfo.new(0.5),{Size=UDim2.new(1,1,0,aK)})
+:Play()
+h:Create(aG,TweenInfo.new(0.5),
+{Size=UDim2.new(1,0,0,aK-38)}):Play()
+h:Create(ax,TweenInfo.new(0.5),{Size=UDim2.new(1,0,0,2)}):Play()
+task.wait(0.5)
+UpdateSizeScroll()
+end
+end
+
+if au==true then
+aC:Destroy()
+aD:Destroy()
+aJ=true
+UpdateSizeSection()
+elseif au==false then
+aJ=true
+UpdateSizeSection()
+else
+aJ=false
+end
+
+if au~=true then
+aC.Activated:Connect(function()
+CircleClick(aC,j.X,j.Y)
+if aJ then
+h:Create(aD,TweenInfo.new(0.5),{Rotation=0}):Play()
+h:Create(aw,TweenInfo.new(0.5),{Size=UDim2.new(1,1,0,30)}):Play()
+h:Create(ax,TweenInfo.new(0.5),{Size=UDim2.new(0,0,0,2)})
+:Play()
+aJ=false
+task.wait(0.5)
+UpdateSizeScroll()
+else
+aJ=true
+UpdateSizeSection()
+end
+end)
+end
+
+if au==true or au==false then
+aJ=true
+local aK=38
+for aL,aM in aG:GetChildren()do
+if aM.Name~="UIListLayout"and aM.Name~="UICorner"then
+aK=aK+aM.Size.Y.Offset+3
+end
+end
+aD.Rotation=90
+aw.Size=UDim2.new(1,1,0,aK)
+aG.Size=UDim2.new(1,0,0,aK-38)
+ax.Size=UDim2.new(1,0,0,2)
+UpdateSizeScroll()
+end
+
+aG.ChildAdded:Connect(UpdateSizeSection)
+aG.ChildRemoved:Connect(UpdateSizeSection)
+
+local aK=ah:FindFirstChildOfClass"UIListLayout"
+if aK then
+aK:GetPropertyChangedSignal"AbsoluteContentSize":Connect(function()
+ah.CanvasSize=UDim2.new(0,0,0,aK.AbsoluteContentSize.Y+10)
+end)
+end
+
+local aL={}
+local aM=0
+
+function aL.AddParagraph(aN,aO)
+local aP=aO or{}
+aP.Title=aP.Title or"Title"
+aP.Content=aP.Content or"Content"
+local aQ={}
+
+local aR=Instance.new"Frame"
+local aS=Instance.new"UICorner"
+local aT=Instance.new"TextLabel"
+local aU=Instance.new"TextLabel"
+
+aR.BackgroundColor3=Color3.fromRGB(255,255,255)
+aR.BackgroundTransparency=0.935
+aR.BorderSizePixel=0
+aR.LayoutOrder=aM
+aR.Size=UDim2.new(1,0,0,46)
+aR.Name="Paragraph"
+aR.Parent=aG
+
+aS.CornerRadius=UDim.new(0,4)
+aS.Parent=aR
+
+local aV=10
+if aP.Icon then
+local aW=Instance.new"ImageLabel"
+aW.Size=UDim2.new(0,20,0,20)
+aW.Position=UDim2.new(0,8,0,12)
+aW.BackgroundTransparency=1
+aW.Name="ParagraphIcon"
+aW.Parent=aR
+
+if f and f[aP.Icon]then
+aW.Image=f[aP.Icon]
+else
+aW.Image=aP.Icon
+end
+
+aV=30
+end
+
+aT.Font=Enum.Font.GothamBold
+aT.Text=aP.Title
+aT.TextColor3=Color3.fromRGB(231,231,231)
+aT.TextSize=13
+aT.TextXAlignment=Enum.TextXAlignment.Left
+aT.TextYAlignment=Enum.TextYAlignment.Top
+aT.BackgroundTransparency=1
+aT.Position=UDim2.new(0,aV,0,10)
+aT.Size=UDim2.new(1,-16,0,13)
+aT.Name="ParagraphTitle"
+aT.Parent=aR
+
+aU.Font=Enum.Font.Gotham
+aU.Text=aP.Content
+aU.TextColor3=Color3.fromRGB(255,255,255)
+aU.TextSize=12
+aU.TextXAlignment=Enum.TextXAlignment.Left
+aU.TextYAlignment=Enum.TextYAlignment.Top
+aU.BackgroundTransparency=1
+aU.Position=UDim2.new(0,aV,0,25)
+aU.Name="ParagraphContent"
+aU.TextWrapped=false
+aU.RichText=true
+aU.Parent=aR
+
+aU.Size=UDim2.new(1,-16,0,aU.TextBounds.Y)
+
+local aW
+if aP.ButtonText then
+aW=Instance.new"TextButton"
+aW.Position=UDim2.new(0,10,0,42)
+aW.Size=UDim2.new(1,-22,0,28)
+aW.BackgroundColor3=Color3.fromRGB(255,255,255)
+aW.BackgroundTransparency=0.935
+aW.Font=Enum.Font.GothamBold
+aW.TextSize=12
+aW.TextTransparency=0.3
+aW.TextColor3=Color3.fromRGB(255,255,255)
+aW.Text=aP.ButtonText
+aW.Parent=aR
+
+local aX=Instance.new"UICorner"
+aX.CornerRadius=UDim.new(0,6)
+aX.Parent=aW
+
+if aP.ButtonCallback then
+aW.MouseButton1Click:Connect(aP.ButtonCallback)
+end
+end
+
+local function UpdateSize()
+local aX=aU.TextBounds.Y+33
+if aW then
+aX=aX+aW.Size.Y.Offset+5
+end
+aR.Size=UDim2.new(1,0,0,aX)
+end
+
+UpdateSize()
+
+aU:GetPropertyChangedSignal"TextBounds":Connect(UpdateSize)
+
+function aQ.SetContent(aX,aY)
+aY=aY or"Content"
+aU.Text=aY
+UpdateSize()
+end
+
+aM=aM+1
+return aQ
+end
+
+function aL.AddPanel(aN,aO)
+aO=aO or{}
+aO.Title=aO.Title or"Title"
+aO.Content=aO.Content or""
+aO.Placeholder=aO.Placeholder or nil
+aO.Default=aO.Default or""
+aO.ButtonText=aO.Button or aO.ButtonText or"Confirm"
+aO.ButtonCallback=aO.Callback or aO.ButtonCallback or function()end
+aO.SubButtonText=aO.SubButton or aO.SubButtonText or nil
+aO.SubButtonCallback=aO.SubCallback or aO.SubButtonCallback or
+function()end
+
+local aP="Panel_"..aO.Title
+if ConfigData[aP]~=nil then
+aO.Default=ConfigData[aP]
+end
+
+local aQ={Value=aO.Default}
+
+local aR=50
+
+if aO.Placeholder then
+aR=aR+40
+end
+
+if aO.SubButtonText then
+aR=aR+40
+else
+aR=aR+36
+end
+
+local aS=Instance.new"Frame"
+aS.BackgroundColor3=Color3.fromRGB(255,255,255)
+aS.BackgroundTransparency=0.935
+aS.Size=UDim2.new(1,0,0,aR)
+aS.LayoutOrder=aM
+aS.Parent=aG
+
+local aT=Instance.new"UICorner"
+aT.CornerRadius=UDim.new(0,4)
+aT.Parent=aS
+
+local aU=Instance.new"TextLabel"
+aU.Font=Enum.Font.GothamBold
+aU.Text=aO.Title
+aU.TextSize=13
+aU.TextColor3=Color3.fromRGB(255,255,255)
+aU.TextXAlignment=Enum.TextXAlignment.Left
+aU.BackgroundTransparency=1
+aU.Position=UDim2.new(0,10,0,10)
+aU.Size=UDim2.new(1,-20,0,13)
+aU.Parent=aS
+
+local aV=Instance.new"TextLabel"
+aV.Font=Enum.Font.Gotham
+aV.Text=aO.Content
+aV.TextSize=12
+aV.TextColor3=Color3.fromRGB(255,255,255)
+aV.TextTransparency=0
+aV.TextXAlignment=Enum.TextXAlignment.Left
+aV.BackgroundTransparency=1
+aV.RichText=true
+aV.Position=UDim2.new(0,10,0,28)
+aV.Size=UDim2.new(1,-20,0,14)
+aV.Parent=aS
+
+local aW
+if aO.Placeholder then
+local aX=Instance.new"Frame"
+aX.AnchorPoint=Vector2.new(0.5,0)
+aX.BackgroundColor3=Color3.fromRGB(255,255,255)
+aX.BackgroundTransparency=0.95
+aX.Position=UDim2.new(0.5,0,0,48)
+aX.Size=UDim2.new(1,-20,0,30)
+aX.Parent=aS
+
+local aY=Instance.new"UICorner"
+aY.CornerRadius=UDim.new(0,4)
+aY.Parent=aX
+
+aW=Instance.new"TextBox"
+aW.Font=Enum.Font.GothamBold
+aW.PlaceholderText=aO.Placeholder
+aW.PlaceholderColor3=Color3.fromRGB(120,120,120)
+aW.Text=aO.Default
+aW.TextSize=11
+aW.TextColor3=Color3.fromRGB(255,255,255)
+aW.BackgroundTransparency=1
+aW.TextXAlignment=Enum.TextXAlignment.Left
+aW.Size=UDim2.new(1,-10,1,-6)
+aW.Position=UDim2.new(0,5,0,3)
+aW.Parent=aX
+end
+
+local aX=0
+if aO.Placeholder then
+aX=88
+else
+aX=48
+end
+
+local aY=Instance.new"TextButton"
+aY.Font=Enum.Font.GothamBold
+aY.Text=aO.ButtonText
+aY.TextColor3=Color3.fromRGB(255,255,255)
+aY.TextSize=12
+aY.TextTransparency=0.3
+aY.BackgroundColor3=Color3.fromRGB(255,255,255)
+aY.BackgroundTransparency=0.935
+aY.Size=aO.SubButtonText and UDim2.new(0.5,-12,0,30)or UDim2.new(1,-20,0,30)
+aY.Position=UDim2.new(0,10,0,aX)
+aY.Parent=aS
+
+local aZ=Instance.new"UICorner"
+aZ.CornerRadius=UDim.new(0,6)
+aZ.Parent=aY
+
+aY.MouseButton1Click:Connect(function()
+aO.ButtonCallback(aW and aW.Text or"")
+end)
+
+if aO.SubButtonText then
+local a_=Instance.new"TextButton"
+a_.Font=Enum.Font.GothamBold
+a_.Text=aO.SubButtonText
+a_.TextColor3=Color3.fromRGB(255,255,255)
+a_.TextSize=12
+a_.TextTransparency=0.3
+a_.BackgroundColor3=Color3.fromRGB(255,255,255)
+a_.BackgroundTransparency=0.935
+a_.Size=UDim2.new(0.5,-12,0,30)
+a_.Position=UDim2.new(0.5,2,0,aX)
+a_.Parent=aS
+
+local a0=Instance.new"UICorner"
+a0.CornerRadius=UDim.new(0,6)
+a0.Parent=a_
+
+a_.MouseButton1Click:Connect(function()
+aO.SubButtonCallback(aW and aW.Text or"")
+end)
+end
+
+if aW then
+aW.FocusLost:Connect(function()
+aQ.Value=aW.Text
+ConfigData[aP]=aW.Text
+
+end)
+end
+
+function aQ.GetInput(a_)
+return aW and aW.Text or""
+end
+
+aM=aM+1
+return aQ
+end
+
+function aL.AddButton(aN,aO)
+aO=aO or{}
+aO.Title=aO.Title or"Confirm"
+aO.Callback=aO.Callback or function()end
+aO.SubTitle=aO.SubTitle or nil
+aO.SubCallback=aO.SubCallback or function()end
+
+local aP=Instance.new"Frame"
+aP.BackgroundColor3=Color3.fromRGB(255,255,255)
+aP.BackgroundTransparency=0.935
+aP.Size=UDim2.new(1,0,0,40)
+aP.LayoutOrder=aM
+aP.Parent=aG
+
+local aQ=Instance.new"UICorner"
+aQ.CornerRadius=UDim.new(0,4)
+aQ.Parent=aP
+
+local aR=Instance.new"TextButton"
+aR.Font=Enum.Font.GothamBold
+aR.Text=aO.Title
+aR.TextSize=12
+aR.TextColor3=Color3.fromRGB(255,255,255)
+aR.TextTransparency=0.3
+aR.BackgroundColor3=Color3.fromRGB(255,255,255)
+aR.BackgroundTransparency=0.935
+aR.Size=aO.SubTitle and UDim2.new(0.5,-8,1,-10)or UDim2.new(1,-12,1,-10)
+aR.Position=UDim2.new(0,6,0,5)
+aR.Parent=aP
+
+local aS=Instance.new"UICorner"
+aS.CornerRadius=UDim.new(0,4)
+aS.Parent=aR
+
+aR.MouseButton1Click:Connect(aO.Callback)
+
+if aO.SubTitle then
+local aT=Instance.new"TextButton"
+aT.Font=Enum.Font.GothamBold
+aT.Text=aO.SubTitle
+aT.TextSize=12
+aT.TextTransparency=0.3
+aT.TextColor3=Color3.fromRGB(255,255,255)
+aT.BackgroundColor3=Color3.fromRGB(255,255,255)
+aT.BackgroundTransparency=0.935
+aT.Size=UDim2.new(0.5,-8,1,-10)
+aT.Position=UDim2.new(0.5,2,0,5)
+aT.Parent=aP
+
+local aU=Instance.new"UICorner"
+aU.CornerRadius=UDim.new(0,4)
+aU.Parent=aT
+
+aT.MouseButton1Click:Connect(aO.SubCallback)
+end
+
+aM=aM+1
+end
+
+function aL.AddToggle(aN,aO)
+local aP=aO or{}
+aP.Title=aP.Title or"Title"
+aP.Title2=aP.Title2 or""
+aP.Content=aP.Content or""
+aP.Default=aP.Default or false
+aP.Callback=aP.Callback or function()end
+
+local aQ="Toggle_"..aP.Title
+if ConfigData[aQ]~=nil then
+aP.Default=ConfigData[aQ]
+end
+
+local aR={Value=aP.Default}
+
+local aS=Instance.new"Frame"
+local aT=Instance.new"UICorner"
+local aU=Instance.new"TextLabel"
+local aV=Instance.new"TextLabel"
+local aW=Instance.new"TextButton"
+local aX=Instance.new"Frame"
+local aY=Instance.new"UICorner"
+local aZ=Instance.new"UIStroke"
+local a_=Instance.new"Frame"
+local a0=Instance.new"UICorner"
+
+aS.BackgroundColor3=Color3.fromRGB(255,255,255)
+aS.BackgroundTransparency=0.935
+aS.BorderSizePixel=0
+aS.LayoutOrder=aM
+aS.Name="Toggle"
+aS.Parent=aG
+
+aT.CornerRadius=UDim.new(0,4)
+aT.Parent=aS
+
+aU.Font=Enum.Font.GothamBold
+aU.Text=aP.Title
+aU.TextSize=13
+aU.TextColor3=Color3.fromRGB(231,231,231)
+aU.TextXAlignment=Enum.TextXAlignment.Left
+aU.TextYAlignment=Enum.TextYAlignment.Top
+aU.BackgroundTransparency=1
+aU.Position=UDim2.new(0,10,0,10)
+aU.Size=UDim2.new(1,-100,0,13)
+aU.Name="ToggleTitle"
+aU.Parent=aS
+
+local a1=Instance.new"TextLabel"
+a1.Font=Enum.Font.GothamBold
+a1.Text=aP.Title2
+a1.TextSize=12
+a1.TextColor3=Color3.fromRGB(231,231,231)
+a1.TextXAlignment=Enum.TextXAlignment.Left
+a1.TextYAlignment=Enum.TextYAlignment.Top
+a1.BackgroundTransparency=1
+a1.Position=UDim2.new(0,10,0,23)
+a1.Size=UDim2.new(1,-100,0,12)
+a1.Name="ToggleTitle2"
+a1.Parent=aS
+
+aV.Font=Enum.Font.GothamBold
+aV.Text=aP.Content
+aV.TextColor3=Color3.fromRGB(255,255,255)
+aV.TextSize=12
+aV.TextTransparency=0.6
+aV.TextXAlignment=Enum.TextXAlignment.Left
+aV.TextYAlignment=Enum.TextYAlignment.Bottom
+aV.BackgroundTransparency=1
+aV.Size=UDim2.new(1,-100,0,12)
+aV.Name="ToggleContent"
+aV.Parent=aS
+
+if aP.Title2~=""then
+aS.Size=UDim2.new(1,0,0,57)
+aV.Position=UDim2.new(0,10,0,36)
+a1.Visible=true
+else
+aS.Size=UDim2.new(1,0,0,46)
+aV.Position=UDim2.new(0,10,0,23)
+a1.Visible=false
+end
+
+aV.Size=UDim2.new(1,-100,0,
+12+(12*(aV.TextBounds.X//aV.AbsoluteSize.X)))
+aV.TextWrapped=true
+if aP.Title2~=""then
+aS.Size=UDim2.new(1,0,0,aV.AbsoluteSize.Y+47)
+else
+aS.Size=UDim2.new(1,0,0,aV.AbsoluteSize.Y+33)
+end
+
+aV:GetPropertyChangedSignal"AbsoluteSize":Connect(function()
+aV.TextWrapped=false
+aV.Size=UDim2.new(1,-100,0,
+12+(12*(aV.TextBounds.X//aV.AbsoluteSize.X)))
+if aP.Title2~=""then
+aS.Size=UDim2.new(1,0,0,aV.AbsoluteSize.Y+47)
+else
+aS.Size=UDim2.new(1,0,0,aV.AbsoluteSize.Y+33)
+end
+aV.TextWrapped=true
+UpdateSizeSection()
+end)
+
+aW.Font=Enum.Font.SourceSans
+aW.Text=""
+aW.BackgroundTransparency=1
+aW.Size=UDim2.new(1,0,1,0)
+aW.Name="ToggleButton"
+aW.Parent=aS
+
+aX.AnchorPoint=Vector2.new(1,0.5)
+aX.BackgroundTransparency=0.92
+aX.BorderSizePixel=0
+aX.Position=UDim2.new(1,-15,0.5,0)
+aX.Size=UDim2.new(0,30,0,15)
+aX.Name="FeatureFrame"
+aX.Parent=aS
+
+aY.Parent=aX
+
+aZ.Color=Color3.fromRGB(255,255,255)
+aZ.Thickness=2
+aZ.Transparency=0.9
+aZ.Parent=aX
+
+a_.BackgroundColor3=Color3.fromRGB(230,230,230)
+a_.BorderSizePixel=0
+a_.Size=UDim2.new(0,14,0,14)
+a_.Name="ToggleCircle"
+a_.Parent=aX
+
+a0.CornerRadius=UDim.new(0,15)
+a0.Parent=a_
+
+aW.Activated:Connect(function()
+aR.Value=not aR.Value
+aR:Set(aR.Value)
+end)
+
+function aR.Set(a2,a3)
+if typeof(aP.Callback)=="function"then
+local a4,a5=pcall(function()
+aP.Callback(a3)
+end)
+if not a4 then warn("Toggle Callback error:",a5)end
+end
+ConfigData[aQ]=a3
+
+if a3 then
+h:Create(aU,TweenInfo.new(0.2),{TextColor3=p.Color}):Play()
+h:Create(a_,TweenInfo.new(0.2),{Position=UDim2.new(0,15,0,0)})
+:Play()
+h:Create(aZ,TweenInfo.new(0.2),{Color=p.Color,Transparency=0})
+:Play()
+h:Create(aX,TweenInfo.new(0.2),
+{BackgroundColor3=p.Color,BackgroundTransparency=0}):Play()
+else
+h:Create(aU,TweenInfo.new(0.2),
+{TextColor3=Color3.fromRGB(230,230,230)}):Play()
+h:Create(a_,TweenInfo.new(0.2),{Position=UDim2.new(0,0,0,0)}):Play()
+h:Create(aZ,TweenInfo.new(0.2),
+{Color=Color3.fromRGB(255,255,255),Transparency=0.9}):Play()
+h:Create(aX,TweenInfo.new(0.2),
+{BackgroundColor3=Color3.fromRGB(255,255,255),BackgroundTransparency=0.92}):Play()
+end
+end
+
+aR:Set(aR.Value)
+aM=aM+1
+Elements[aQ]=aR
+return aR
+end
+
+function aL.AddSlider(aN,aO)
+local aP=aO or{}
+aP.Title=aP.Title or"Slider"
+aP.Content=aP.Content or""
+aP.Increment=aP.Increment or 1
+aP.Min=aP.Min or 0
+aP.Max=aP.Max or 100
+aP.Default=aP.Default or 50
+aP.Callback=aP.Callback or function()end
+
+local aQ="Slider_"..aP.Title
+if ConfigData[aQ]~=nil then
+aP.Default=ConfigData[aQ]
+end
+
+local aR={Value=aP.Default}
+
+local aS=Instance.new"Frame";
+local aT=Instance.new"UICorner";
+local aU=Instance.new"TextLabel";
+local aV=Instance.new"TextLabel";
+local aW=Instance.new"Frame";
+local aX=Instance.new"UICorner";
+local aY=Instance.new"TextBox";
+local aZ=Instance.new"Frame";
+local a_=Instance.new"UICorner";
+local a0=Instance.new"Frame";
+local a1=Instance.new"UICorner";
+Instance.new"UIStroke";
+local a2=Instance.new"Frame";
+local a3=Instance.new"UICorner";
+local a4=Instance.new"UIStroke";
+Instance.new"UIStroke";
+
+aS.BackgroundColor3=Color3.fromRGB(255,255,255)
+aS.BackgroundTransparency=0.9350000023841858
+aS.BorderColor3=Color3.fromRGB(0,0,0)
+aS.BorderSizePixel=0
+aS.LayoutOrder=aM
+aS.Size=UDim2.new(1,0,0,46)
+aS.Name="Slider"
+aS.Parent=aG
+
+aT.CornerRadius=UDim.new(0,4)
+aT.Parent=aS
+
+aU.Font=Enum.Font.GothamBold
+aU.Text=aP.Title
+aU.TextColor3=Color3.fromRGB(230.77499270439148,230.77499270439148,230.77499270439148)
+aU.TextSize=13
+aU.TextXAlignment=Enum.TextXAlignment.Left
+aU.TextYAlignment=Enum.TextYAlignment.Top
+aU.BackgroundColor3=Color3.fromRGB(255,255,255)
+aU.BackgroundTransparency=0.9990000128746033
+aU.BorderColor3=Color3.fromRGB(0,0,0)
+aU.BorderSizePixel=0
+aU.Position=UDim2.new(0,10,0,10)
+aU.Size=UDim2.new(1,-180,0,13)
+aU.Name="SliderTitle"
+aU.Parent=aS
+
+aV.Font=Enum.Font.GothamBold
+aV.Text=aP.Content
+aV.TextColor3=Color3.fromRGB(255,255,255)
+aV.TextSize=12
+aV.TextTransparency=0.6000000238418579
+aV.TextXAlignment=Enum.TextXAlignment.Left
+aV.TextYAlignment=Enum.TextYAlignment.Bottom
+aV.BackgroundColor3=Color3.fromRGB(255,255,255)
+aV.BackgroundTransparency=0.9990000128746033
+aV.BorderColor3=Color3.fromRGB(0,0,0)
+aV.BorderSizePixel=0
+aV.Position=UDim2.new(0,10,0,25)
+aV.Size=UDim2.new(1,-180,0,12)
+aV.Name="SliderContent"
+aV.Parent=aS
+
+aV.Size=UDim2.new(1,-180,0,
+12+(12*(aV.TextBounds.X//aV.AbsoluteSize.X)))
+aV.TextWrapped=true
+aS.Size=UDim2.new(1,0,0,aV.AbsoluteSize.Y+33)
+
+aV:GetPropertyChangedSignal"AbsoluteSize":Connect(function()
+aV.TextWrapped=false
+aV.Size=UDim2.new(1,-180,0,
+12+(12*(aV.TextBounds.X//aV.AbsoluteSize.X)))
+aS.Size=UDim2.new(1,0,0,aV.AbsoluteSize.Y+33)
+aV.TextWrapped=true
+UpdateSizeSection()
+end)
+
+aW.AnchorPoint=Vector2.new(0,0.5)
+aW.BackgroundColor3=p.Color
+aW.BorderColor3=Color3.fromRGB(0,0,0)
+aW.BackgroundTransparency=1
+aW.BorderSizePixel=0
+aW.Position=UDim2.new(1,-155,0.5,0)
+aW.Size=UDim2.new(0,28,0,20)
+aW.Name="SliderInput"
+aW.Parent=aS
+
+aX.CornerRadius=UDim.new(0,2)
+aX.Parent=aW
+
+aY.Font=Enum.Font.GothamBold
+aY.Text="90"
+aY.TextColor3=Color3.fromRGB(255,255,255)
+aY.TextSize=13
+aY.TextWrapped=true
+aY.BackgroundColor3=Color3.fromRGB(0,0,0)
+aY.BackgroundTransparency=0.9990000128746033
+aY.BorderColor3=Color3.fromRGB(0,0,0)
+aY.BorderSizePixel=0
+aY.Position=UDim2.new(0,-1,0,0)
+aY.Size=UDim2.new(1,0,1,0)
+aY.Parent=aW
+
+aZ.AnchorPoint=Vector2.new(1,0.5)
+aZ.BackgroundColor3=Color3.fromRGB(255,255,255)
+aZ.BackgroundTransparency=0.800000011920929
+aZ.BorderColor3=Color3.fromRGB(0,0,0)
+aZ.BorderSizePixel=0
+aZ.Position=UDim2.new(1,-20,0.5,0)
+aZ.Size=UDim2.new(0,100,0,3)
+aZ.Name="SliderFrame"
+aZ.Parent=aS
+
+a_.Parent=aZ
+
+a0.AnchorPoint=Vector2.new(0,0.5)
+a0.BackgroundColor3=p.Color
+a0.BorderColor3=Color3.fromRGB(0,0,0)
+a0.BorderSizePixel=0
+a0.Position=UDim2.new(0,0,0.5,0)
+a0.Size=UDim2.new(0.899999976,0,0,1)
+a0.Name="SliderDraggable"
+a0.Parent=aZ
+
+a1.Parent=a0
+
+a2.AnchorPoint=Vector2.new(1,0.5)
+a2.BackgroundColor3=p.Color
+a2.BorderColor3=Color3.fromRGB(0,0,0)
+a2.BorderSizePixel=0
+a2.Position=UDim2.new(1,4,0.5,0)
+a2.Size=UDim2.new(0,8,0,8)
+a2.Name="SliderCircle"
+a2.Parent=a0
+
+a3.Parent=a2
+
+a4.Color=p.Color
+a4.Parent=a2
+
+local a5=false
+local function Round(a6,a7)
+local a8=math.floor(a6/a7+(math.sign(a6)*0.5))*a7
+if a8<0 then
+a8=a8+a7
+end
+return a8
+end
+function aR.Set(a6,a7)
+a7=math.clamp(Round(a7,aP.Increment),aP.Min,aP.Max)
+aR.Value=a7
+aY.Text=tostring(a7)
+h:Create(
+a0,
+TweenInfo.new(0.3,Enum.EasingStyle.Quad,Enum.EasingDirection.Out),
+{Size=UDim2.fromScale((a7-aP.Min)/(aP.Max-aP.Min),1)}
+):Play()
+
+aP.Callback(a7)
+ConfigData[aQ]=a7
+
+end
+
+aZ.InputBegan:Connect(function(a6)
+if a6.UserInputType==Enum.UserInputType.MouseButton1 or a6.UserInputType==Enum.UserInputType.Touch then
+a5=true
+h:Create(
+a2,
+TweenInfo.new(0.2,Enum.EasingStyle.Quad,Enum.EasingDirection.Out),
+{Size=UDim2.new(0,14,0,14)}
+):Play()
+local a7=math.clamp(
+(a6.Position.X-aZ.AbsolutePosition.X)/aZ.AbsoluteSize.X,
+0,
+1
+)
+aR:Set(aP.Min+((aP.Max-aP.Min)*a7))
+end
+end)
+
+aZ.InputEnded:Connect(function(a6)
+if a6.UserInputType==Enum.UserInputType.MouseButton1 or a6.UserInputType==Enum.UserInputType.Touch then
+a5=false
+aP.Callback(aR.Value)
+h:Create(
+a2,
+TweenInfo.new(0.2,Enum.EasingStyle.Quad,Enum.EasingDirection.Out),
+{Size=UDim2.new(0,8,0,8)}
+):Play()
+end
+end)
+
+g.InputChanged:Connect(function(a6)
+if a5 and(a6.UserInputType==Enum.UserInputType.MouseMovement or a6.UserInputType==Enum.UserInputType.Touch)then
+local a7=math.clamp(
+(a6.Position.X-aZ.AbsolutePosition.X)/aZ.AbsoluteSize.X,
+0,
+1
+)
+aR:Set(aP.Min+((aP.Max-aP.Min)*a7))
+end
+end)
+
+aY:GetPropertyChangedSignal"Text":Connect(function()
+local a6=aY.Text:gsub("[^%d]","")
+if a6~=""then
+local a7=math.clamp(tonumber(a6),aP.Min,aP.Max)
+aR:Set(a7)
+else
+aR:Set(aP.Min)
+end
+end)
+aR:Set(aP.Default)
+aM=aM+1
+Elements[aQ]=aR
+return aR
+end
+
+function aL.AddInput(aN,aO)
+local aP=aO or{}
+aP.Title=aP.Title or"Title"
+aP.Content=aP.Content or""
+aP.Callback=aP.Callback or function()end
+aP.Default=aP.Default or""
+
+local aQ="Input_"..aP.Title
+if ConfigData[aQ]~=nil then
+aP.Default=ConfigData[aQ]
+end
+
+local aR={Value=aP.Default}
+
+local aS=Instance.new"Frame";
+local aT=Instance.new"UICorner";
+local aU=Instance.new"TextLabel";
+local aV=Instance.new"TextLabel";
+local aW=Instance.new"Frame";
+local aX=Instance.new"UICorner";
+local aY=Instance.new"TextBox";
+
+aS.BackgroundColor3=Color3.fromRGB(255,255,255)
+aS.BackgroundTransparency=0.9350000023841858
+aS.BorderColor3=Color3.fromRGB(0,0,0)
+aS.BorderSizePixel=0
+aS.LayoutOrder=aM
+aS.Size=UDim2.new(1,0,0,46)
+aS.Name="Input"
+aS.Parent=aG
+
+aT.CornerRadius=UDim.new(0,4)
+aT.Parent=aS
+
+aU.Font=Enum.Font.GothamBold
+aU.Text=aP.Title or"TextBox"
+aU.TextColor3=Color3.fromRGB(230.77499270439148,230.77499270439148,230.77499270439148)
+aU.TextSize=13
+aU.TextXAlignment=Enum.TextXAlignment.Left
+aU.TextYAlignment=Enum.TextYAlignment.Top
+aU.BackgroundColor3=Color3.fromRGB(255,255,255)
+aU.BackgroundTransparency=0.9990000128746033
+aU.BorderColor3=Color3.fromRGB(0,0,0)
+aU.BorderSizePixel=0
+aU.Position=UDim2.new(0,10,0,10)
+aU.Size=UDim2.new(1,-180,0,13)
+aU.Name="InputTitle"
+aU.Parent=aS
+
+aV.Font=Enum.Font.GothamBold
+aV.Text=aP.Content or"This is a TextBox"
+aV.TextColor3=Color3.fromRGB(255,255,255)
+aV.TextSize=12
+aV.TextTransparency=0.6000000238418579
+aV.TextWrapped=true
+aV.TextXAlignment=Enum.TextXAlignment.Left
+aV.TextYAlignment=Enum.TextYAlignment.Bottom
+aV.BackgroundColor3=Color3.fromRGB(255,255,255)
+aV.BackgroundTransparency=0.9990000128746033
+aV.BorderColor3=Color3.fromRGB(0,0,0)
+aV.BorderSizePixel=0
+aV.Position=UDim2.new(0,10,0,25)
+aV.Size=UDim2.new(1,-180,0,12)
+aV.Name="InputContent"
+aV.Parent=aS
+
+aV.Size=UDim2.new(1,-180,0,
+12+(12*(aV.TextBounds.X//aV.AbsoluteSize.X)))
+aV.TextWrapped=true
+aS.Size=UDim2.new(1,0,0,aV.AbsoluteSize.Y+33)
+
+aV:GetPropertyChangedSignal"AbsoluteSize":Connect(function()
+aV.TextWrapped=false
+aV.Size=UDim2.new(1,-180,0,
+12+(12*(aV.TextBounds.X//aV.AbsoluteSize.X)))
+aS.Size=UDim2.new(1,0,0,aV.AbsoluteSize.Y+33)
+aV.TextWrapped=true
+UpdateSizeSection()
+end)
+
+aW.AnchorPoint=Vector2.new(1,0.5)
+aW.BackgroundColor3=Color3.fromRGB(255,255,255)
+aW.BackgroundTransparency=0.949999988079071
+aW.BorderColor3=Color3.fromRGB(0,0,0)
+aW.BorderSizePixel=0
+aW.ClipsDescendants=true
+aW.Position=UDim2.new(1,-7,0.5,0)
+aW.Size=UDim2.new(0,148,0,30)
+aW.Name="InputFrame"
+aW.Parent=aS
+
+aX.CornerRadius=UDim.new(0,4)
+aX.Parent=aW
+
+aY.CursorPosition=-1
+aY.Font=Enum.Font.GothamBold
+aY.PlaceholderColor3=Color3.fromRGB(120.00000044703484,120.00000044703484,
+120.00000044703484)
+aY.PlaceholderText="Input Here"
+aY.Text=aP.Default
+aY.TextColor3=Color3.fromRGB(255,255,255)
+aY.TextSize=12
+aY.TextXAlignment=Enum.TextXAlignment.Left
+aY.AnchorPoint=Vector2.new(0,0.5)
+aY.BackgroundColor3=Color3.fromRGB(255,255,255)
+aY.BackgroundTransparency=0.9990000128746033
+aY.BorderColor3=Color3.fromRGB(0,0,0)
+aY.BorderSizePixel=0
+aY.Position=UDim2.new(0,5,0.5,0)
+aY.Size=UDim2.new(1,-10,1,-8)
+aY.Name="InputTextBox"
+aY.Parent=aW
+function aR.Set(aZ,a_)
+aY.Text=a_
+aR.Value=a_
+aP.Callback(a_)
+ConfigData[aQ]=a_
+
+end
+
+aR:Set(aR.Value)
+
+aY.FocusLost:Connect(function()
+aR:Set(aY.Text)
+end)
+aM=aM+1
+Elements[aQ]=aR
+return aR
+end
+
+function aL.AddDropdown(aN,aO)
+local aP=aO or{}
+aP.Title=aP.Title or"Title"
+aP.Content=aP.Content or""
+aP.Multi=aP.Multi or false
+aP.Options=aP.Options or{}
+aP.Default=aP.Default or(aP.Multi and{}or nil)
+aP.Callback=aP.Callback or function()end
+
+local aQ="Dropdown_"..aP.Title
+if ConfigData[aQ]~=nil then
+aP.Default=ConfigData[aQ]
+end
+
+local aR={Value=aP.Default,Options=aP.Options}
+
+local aS=Instance.new"Frame"
+local aT=Instance.new"TextButton"
+local aU=Instance.new"UICorner"
+local aV=Instance.new"TextLabel"
+local aW=Instance.new"TextLabel"
+local aX=Instance.new"Frame"
+local aY=Instance.new"UICorner"
+local aZ=Instance.new"TextLabel"
+local a_=Instance.new"ImageLabel"
+
+aS.BackgroundColor3=Color3.fromRGB(255,255,255)
+aS.BackgroundTransparency=0.935
+aS.BorderSizePixel=0
+aS.LayoutOrder=aM
+aS.Size=UDim2.new(1,0,0,46)
+aS.Name="Dropdown"
+aS.Parent=aG
+
+aT.Text=""
+aT.BackgroundTransparency=1
+aT.Size=UDim2.new(1,0,1,0)
+aT.Name="ToggleButton"
+aT.Parent=aS
+
+aU.CornerRadius=UDim.new(0,4)
+aU.Parent=aS
+
+aV.Font=Enum.Font.GothamBold
+aV.Text=aP.Title
+aV.TextColor3=Color3.fromRGB(230,230,230)
+aV.TextSize=13
+aV.TextXAlignment=Enum.TextXAlignment.Left
+aV.BackgroundTransparency=1
+aV.Position=UDim2.new(0,10,0,10)
+aV.Size=UDim2.new(1,-180,0,13)
+aV.Name="DropdownTitle"
+aV.Parent=aS
+
+aW.Font=Enum.Font.GothamBold
+aW.Text=aP.Content
+aW.TextColor3=Color3.fromRGB(255,255,255)
+aW.TextSize=12
+aW.TextTransparency=0.6
+aW.TextWrapped=true
+aW.TextXAlignment=Enum.TextXAlignment.Left
+aW.BackgroundTransparency=1
+aW.Position=UDim2.new(0,10,0,25)
+aW.Size=UDim2.new(1,-180,0,12)
+aW.Name="DropdownContent"
+aW.Parent=aS
+
+aX.AnchorPoint=Vector2.new(1,0.5)
+aX.BackgroundTransparency=0.95
+aX.Position=UDim2.new(1,-7,0.5,0)
+aX.Size=UDim2.new(0,148,0,30)
+aX.Name="SelectOptionsFrame"
+aX.LayoutOrder=ad
+aX.Parent=aS
+
+aY.CornerRadius=UDim.new(0,4)
+aY.Parent=aX
+
+aT.Activated:Connect(function()
+if not R.Visible then
+R.Visible=true
+aa:JumpToIndex(aX.LayoutOrder)
+h:Create(R,TweenInfo.new(0.3),{BackgroundTransparency=1}):Play()
+h:Create(W,TweenInfo.new(0.3),{Position=UDim2.new(1,-11,0.5,0)})
+:Play()
+end
+end)
+
+aZ.Font=Enum.Font.GothamBold
+aZ.Text=aP.Multi and"Select Options"or"Select Option"
+aZ.TextColor3=Color3.fromRGB(255,255,255)
+aZ.TextSize=12
+aZ.TextTransparency=0.6
+aZ.TextXAlignment=Enum.TextXAlignment.Left
+aZ.AnchorPoint=Vector2.new(0,0.5)
+aZ.BackgroundTransparency=1
+aZ.Position=UDim2.new(0,5,0.5,0)
+aZ.Size=UDim2.new(1,-30,1,-8)
+aZ.Name="OptionSelecting"
+aZ.Parent=aX
+
+a_.Image="rbxassetid://16851841101"
+a_.ImageColor3=Color3.fromRGB(230,230,230)
+a_.AnchorPoint=Vector2.new(1,0.5)
+a_.BackgroundTransparency=1
+a_.Position=UDim2.new(1,0,0.5,0)
+a_.Size=UDim2.new(0,25,0,25)
+a_.Name="OptionImg"
+a_.Parent=aX
+
+local a0=Instance.new"Frame"
+a0.Size=UDim2.new(1,0,1,0)
+a0.BackgroundTransparency=1
+a0.Parent=_
+
+local a1=Instance.new"TextBox"
+a1.PlaceholderText="Search"
+a1.Font=Enum.Font.Gotham
+a1.Text=""
+a1.TextSize=12
+a1.TextColor3=Color3.fromRGB(255,255,255)
+a1.BackgroundColor3=Color3.fromRGB(30,30,30)
+a1.BackgroundTransparency=0.9
+a1.BorderSizePixel=0
+a1.Size=UDim2.new(1,0,0,25)
+a1.Position=UDim2.new(0,0,0,0)
+a1.ClearTextOnFocus=false
+a1.Name="SearchBox"
+a1.Parent=a0
+
+local a2=Instance.new"ScrollingFrame"
+a2.Size=UDim2.new(1,0,1,-30)
+a2.Position=UDim2.new(0,0,0,30)
+a2.ScrollBarImageTransparency=1
+a2.BorderSizePixel=0
+a2.BackgroundTransparency=1
+a2.ScrollBarThickness=0
+a2.CanvasSize=UDim2.new(0,0,0,0)
+a2.Name="ScrollSelect"
+a2.Parent=a0
+
+local a3=Instance.new"UIListLayout"
+a3.Padding=UDim.new(0,3)
+a3.SortOrder=Enum.SortOrder.LayoutOrder
+a3.Parent=a2
+
+a3:GetPropertyChangedSignal"AbsoluteContentSize":Connect(function()
+a2.CanvasSize=UDim2.new(0,0,0,a3.AbsoluteContentSize.Y)
+end)
+
+a1:GetPropertyChangedSignal"Text":Connect(function()
+local a4=string.lower(a1.Text)
+for a5,a6 in pairs(a2:GetChildren())do
+if a6.Name=="Option"and a6:FindFirstChild"OptionText"then
+local a7=string.lower(a6.OptionText.Text)
+a6.Visible=a4==""or string.find(a7,a4,1,true)
+end
+end
+a2.CanvasSize=UDim2.new(0,0,0,a3.AbsoluteContentSize.Y)
+end)
+
+local a4=0
+
+function aR.Clear(a5)
+for a6,a7 in a2:GetChildren()do
+if a7.Name=="Option"then
+a7:Destroy()
+end
+end
+aR.Value=aP.Multi and{}or nil
+aR.Options={}
+aZ.Text=aP.Multi and"Select Options"or"Select Option"
+a4=0
+end
+
+function aR.AddOption(a5,a6)
+local a7,a8
+if typeof(a6)=="table"and a6.Label and a6.Value~=nil then
+a7=tostring(a6.Label)
+a8=a6.Value
+else
+a7=tostring(a6)
+a8=a6
+end
+
+local a9=Instance.new"Frame"
+local ba=Instance.new"TextButton"
+local bb=Instance.new"TextLabel"
+local bc=Instance.new"Frame"
+local bd=Instance.new"UIStroke"
+local be=Instance.new"UICorner"
+local bf=Instance.new"UICorner"
+
+a9.BackgroundTransparency=1
+a9.Size=UDim2.new(1,0,0,30)
+a9.Name="Option"
+a9.Parent=a2
+
+bf.CornerRadius=UDim.new(0,3)
+bf.Parent=a9
+
+ba.BackgroundTransparency=1
+ba.Size=UDim2.new(1,0,1,0)
+ba.Text=""
+ba.Name="OptionButton"
+ba.Parent=a9
+
+bb.Font=Enum.Font.GothamBold
+bb.Text=a7
+bb.TextSize=13
+bb.TextColor3=Color3.fromRGB(230,230,230)
+bb.Position=UDim2.new(0,8,0,8)
+bb.Size=UDim2.new(1,-100,0,13)
+bb.BackgroundTransparency=1
+bb.TextXAlignment=Enum.TextXAlignment.Left
+bb.Name="OptionText"
+bb.Parent=a9
+
+a9:SetAttribute("RealValue",a8)
+
+bc.AnchorPoint=Vector2.new(0,0.5)
+bc.BackgroundColor3=p.Color
+bc.Position=UDim2.new(0,2,0.5,0)
+bc.Size=UDim2.new(0,0,0,0)
+bc.Name="ChooseFrame"
+bc.Parent=a9
+
+bd.Color=p.Color
+bd.Thickness=1.6
+bd.Transparency=0.999
+bd.Parent=bc
+be.Parent=bc
+
+ba.Activated:Connect(function()
+if aP.Multi then
+if not table.find(aR.Value,a8)then
+table.insert(aR.Value,a8)
+else
+for bg,bh in pairs(aR.Value)do
+if bh==a8 then
+table.remove(aR.Value,bg)
+break
+end
+end
+end
+else
+aR.Value=a8
+end
+aR:Set(aR.Value)
+end)
+end
+
+function aR.Set(a5,a6)
+if aP.Multi then
+aR.Value=type(a6)=="table"and a6 or{}
+else
+aR.Value=(type(a6)=="table"and a6[1])or a6
+end
+
+ConfigData[aQ]=aR.Value
+
+
+local a7={}
+for a8,a9 in a2:GetChildren()do
+if a9.Name=="Option"and a9:FindFirstChild"OptionText"then
+local ba=a9:GetAttribute"RealValue"
+local bb=aP.Multi and table.find(aR.Value,ba)or
+aR.Value==ba
+
+if bb then
+h:Create(a9.ChooseFrame,TweenInfo.new(0.2),
+{Size=UDim2.new(0,1,0,12)}):Play()
+h:Create(a9.ChooseFrame.UIStroke,TweenInfo.new(0.2),{Transparency=0})
+:Play()
+h:Create(a9,TweenInfo.new(0.2),{BackgroundTransparency=0.935}):Play()
+table.insert(a7,a9.OptionText.Text)
+else
+h:Create(a9.ChooseFrame,TweenInfo.new(0.1),
+{Size=UDim2.new(0,0,0,0)}):Play()
+h:Create(a9.ChooseFrame.UIStroke,TweenInfo.new(0.1),
+{Transparency=0.999}):Play()
+h:Create(a9,TweenInfo.new(0.1),{BackgroundTransparency=0.999}):Play()
+end
+end
+end
+
+aZ.Text=(#a7==0)
+and(aP.Multi and"Select Options"or"Select Option")
+or table.concat(a7,", ")
+
+if aP.Callback then
+if aP.Multi then
+aP.Callback(aR.Value)
+else
+local a8=(aR.Value~=nil)and tostring(aR.Value)or""
+aP.Callback(a8)
+end
+end
+end
+
+function aR.SetValue(a5,a6)
+a5:Set(a6)
+end
+
+function aR.GetValue(a5)
+return a5.Value
+end
+
+function aR.SetValues(a5,a6,a7)
+a6=a6 or{}
+a7=a7 or(aP.Multi and{}or nil)
+aR:Clear()
+for a8,a9 in ipairs(a6)do
+aR:AddOption(a9)
+end
+aR.Options=a6
+aR:Set(a7)
+end
+
+aR:SetValues(aR.Options,aR.Value)
+
+aM=aM+1
+ad=ad+1
+Elements[aQ]=aR
+return aR
+end
+
+function aL.AddDivider(aN)
+local aO=Instance.new"Frame"
+aO.Name="Divider"
+aO.Parent=aG
+aO.AnchorPoint=Vector2.new(0.5,0)
+aO.Position=UDim2.new(0.5,0,0,0)
+aO.Size=UDim2.new(1,0,0,2)
+aO.BackgroundColor3=Color3.fromRGB(255,255,255)
+aO.BackgroundTransparency=0
+aO.BorderSizePixel=0
+aO.LayoutOrder=aM
+
+local aP=Instance.new"UIGradient"
+aP.Color=ColorSequence.new{
+ColorSequenceKeypoint.new(0,Color3.fromRGB(20,20,20)),
+ColorSequenceKeypoint.new(0.5,p.Color),
+ColorSequenceKeypoint.new(1,Color3.fromRGB(20,20,20))
+}
+aP.Parent=aO
+
+local aQ=Instance.new"UICorner"
+aQ.CornerRadius=UDim.new(0,2)
+aQ.Parent=aO
+
+aM=aM+1
+return aO
+end
+
+function aL.AddSubSection(aN,aO)
+aO=aO or"Sub Section"
+
+local aP=Instance.new"Frame"
+aP.Name="SubSection"
+aP.Parent=aG
+aP.BackgroundTransparency=1
+aP.Size=UDim2.new(1,0,0,22)
+aP.LayoutOrder=aM
+
+local aQ=Instance.new"Frame"
+aQ.Parent=aP
+aQ.Size=UDim2.new(1,0,1,0)
+aQ.BackgroundColor3=Color3.fromRGB(255,255,255)
+aQ.BackgroundTransparency=0.935
+aQ.BorderSizePixel=0
+Instance.new("UICorner",aQ).CornerRadius=UDim.new(0,6)
+
+local aR=Instance.new"TextLabel"
+aR.Parent=aP
+aR.AnchorPoint=Vector2.new(0,0.5)
+aR.Position=UDim2.new(0,10,0.5,0)
+aR.Size=UDim2.new(1,-20,1,0)
+aR.BackgroundTransparency=1
+aR.Font=Enum.Font.GothamBold
+aR.Text="── "..aO.." ──"
+aR.TextColor3=Color3.fromRGB(230,230,230)
+aR.TextSize=12
+aR.TextXAlignment=Enum.TextXAlignment.Left
+
+aM=aM+1
+return aP
+end
+
+function aL.AddConfigPanel(aN)
+local aO=d or""
+
+
+local aP=aL:AddParagraph{
+Title="Config Manager",
+Content="Current: "..(d or"None").." | Autoload: "..(GetAutoload()or"None"),
+Icon="settings"
+}
+
+
+local aQ=aL:AddInput{
+Title="Config Name",
+Content="Enter the name for your config",
+Placeholder="e.g., Default, PVP, Farming",
+Default=d or"",
+Callback=function(aQ)
+aO=aQ
+end
+}
+
+
+local aR=GetConfigList()
+local aS=aL:AddDropdown{
+Title="Select Config",
+Content="Choose from existing configs",
+Options=aR,
+Default=nil,
+Callback=function(aS)
+aO=aS
+aQ:Set(aS)
+end
+}
+
+
+aL:AddButton{
+Title="Save Config",
+SubTitle="Load Config",
+Callback=function()
+if aO~=""then
+if SaveConfigAs(aO)then
+chloex("Config saved: "..aO,3,Color3.fromRGB(100,255,100))
+
+local aT=GetConfigList()
+aS:SetValues(aT,aO)
+aP:SetContent("Current: "..aO.." | Autoload: "..(GetAutoload()or"None"))
+end
+else
+chloex("Please enter a config name",3,Color3.fromRGB(255,100,100))
+end
+end,
+SubCallback=function()
+if aO~=""then
+if LoadConfig(aO)then
+chloex("Config loaded: "..aO,3,Color3.fromRGB(100,255,100))
+aP:SetContent("Current: "..aO.." | Autoload: "..(GetAutoload()or"None"))
+else
+chloex("Failed to load: "..aO,3,Color3.fromRGB(255,100,100))
+end
+else
+chloex("Please select a config",3,Color3.fromRGB(255,100,100))
+end
+end
+}
+
+
+aL:AddButton{
+Title="Delete Config",
+SubTitle="Set Autoload",
+Callback=function()
+if aO~=""then
+
+chloex("Click again to confirm delete: "..aO,4,Color3.fromRGB(255,150,100))
+task.wait(0.5)
+
+if DeleteConfig(aO)then
+chloex("Config deleted: "..aO,3,Color3.fromRGB(255,100,100))
+aO=""
+aQ:Set""
+
+
+local aT=GetConfigList()
+aS:SetValues(aT,nil)
+aP:SetContent("Current: "..(d or"None").." | Autoload: "..(GetAutoload()or"None"))
+end
+else
+chloex("Please select a config to delete",3,Color3.fromRGB(255,100,100))
+end
+end,
+SubCallback=function()
+if aO~=""then
+SetAutoload(aO)
+chloex("Autoload set to: "..aO,3,Color3.fromRGB(100,200,255))
+aP:SetContent("Current: "..(d or"None").." | Autoload: "..aO)
+else
+chloex("Please enter a config name",3,Color3.fromRGB(255,100,100))
+end
+end
+}
+
+
+aL:AddButton{
+Title="Refresh List",
+SubTitle="Clear Autoload",
+Callback=function()
+local aT=GetConfigList()
+aS:SetValues(aT,nil)
+chloex("Config list refreshed ("..#aT.." configs)",2,Color3.fromRGB(150,150,255))
+end,
+SubCallback=function()
+ClearAutoload()
+chloex("Autoload cleared",3,Color3.fromRGB(200,200,100))
+aP:SetContent("Current: "..(d or"None").." | Autoload: None")
+end
+}
+
+
+aL:AddButton{
+Title="Reset All Elements to Default",
+Callback=function()
+ResetElements()
+chloex("All elements reset to default values",3,Color3.fromRGB(255,200,100))
+end
+}
+
+
+return{
+UpdateStatus=function()
+aP:SetContent("Current: "..(d or"None").." | Autoload: "..(GetAutoload()or"None"))
+end,
+RefreshList=function()
+local aT=GetConfigList()
+aS:SetValues(aT,nil)
+end
+}
+end
+
+ar=ar+1
+return aL
+end
+
+ac=ac+1
+local as=ag.Name:gsub("%s+","_")
+_G[as]=aq
+return aq
+end
+
+return ab
+end
+
+return n
